@@ -57,11 +57,11 @@ src/
     Gallery.tsx      # home con las tarjetas de demos
     DemoLayout.tsx   # barra superior "← Galería" que envuelve cada demo
   components/ui/     # componentes shadcn espejados del front real
+                     # (button, card, input, label, select, dialog)
   demos/
     registry.tsx     # ← el array de demos (fuente de verdad)
     login/
-    formulario-cesion/
-    tabla-operaciones/
+    alta-usuario/    # ABM usuarios (MAGIA-47): permisos por dominio, AD, validación
   lib/utils.ts       # cn()
   app.css            # tokens de marca Atlas (espejo de atlas-trade-front)
 ```

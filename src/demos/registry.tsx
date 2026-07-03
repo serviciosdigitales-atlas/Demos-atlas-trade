@@ -1,8 +1,7 @@
 import type { ComponentType } from "react";
 
 import { LoginDemo } from "@/demos/login/LoginDemo";
-import { FormularioCesionDemo } from "@/demos/formulario-cesion/FormularioCesionDemo";
-import { TablaOperacionesDemo } from "@/demos/tabla-operaciones/TablaOperacionesDemo";
+import { AltaUsuarioDemo } from "@/demos/alta-usuario/AltaUsuarioDemo";
 
 /**
  * Un demo del catálogo. Para agregar uno nuevo:
@@ -35,19 +34,12 @@ export const demos: DemoEntry[] = [
     component: LoginDemo,
   },
   {
-    slug: "formulario-cesion",
-    title: "Formulario de cesión",
-    description: "Alta de una operación de cesión de facturas con validación.",
-    category: "Operaciones",
-    status: "en-progreso",
-    component: FormularioCesionDemo,
-  },
-  {
-    slug: "tabla-operaciones",
-    title: "Tabla de operaciones",
-    description: "Listado de operaciones con estados y montos.",
-    category: "Operaciones",
-    status: "borrador",
-    component: TablaOperacionesDemo,
+    slug: "alta-usuario",
+    title: "Alta de usuario (ABM)",
+    description:
+      "MAGIA-47 · Alta de usuarios con permisos por dominio, búsqueda AD, entes bloqueados y validación.",
+    category: "Usuarios",
+    status: "listo",
+    component: AltaUsuarioDemo,
   },
 ];
