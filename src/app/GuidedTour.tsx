@@ -9,11 +9,11 @@ import { BrandBar } from "@/app/BrandBar";
 import { DemoFlowContext } from "@/app/flow";
 
 /**
- * Modo demo guiado (recorrido). A diferencia de abrir cada mock por separado
- * desde la galería, esta pantalla **encadena** los demos definidos en
- * `guidedTour`: en cada paso, el botón correspondiente de la propia pantalla
- * (Ingresar, Alta de usuario, …) avanza al siguiente, simulando el flujo real
- * de la aplicación.
+ * "Probar plataforma": recorrido encadenado de la plataforma. A diferencia de
+ * abrir cada componente por separado desde la galería, esta pantalla
+ * **encadena** los demos definidos en `guidedTour`: en cada paso, el botón
+ * correspondiente de la propia pantalla (Ingresar, Alta de usuario, …) avanza
+ * al siguiente, simulando el flujo real de la aplicación.
  */
 export function GuidedTour() {
   const [step, setStep] = useState(0);

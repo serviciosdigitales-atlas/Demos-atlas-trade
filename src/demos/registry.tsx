@@ -55,9 +55,10 @@ export const demos: DemoEntry[] = [
 ];
 
 /**
- * Pasos del **modo demo guiado** (recorrido). A diferencia de abrir cada mock
- * por separado, el recorrido encadena estas pantallas: en cada una, el botón
- * correspondiente (Ingresar, Alta de usuario, …) lleva a la siguiente.
+ * Pasos de **"Probar plataforma"** (recorrido encadenado). A diferencia de
+ * abrir cada componente por separado, el recorrido encadena estas pantallas:
+ * en cada una, el botón correspondiente (Ingresar, Alta de usuario, …) lleva a
+ * la siguiente.
  *
  * `nextLabel` describe la acción que avanza; se muestra como pista en la barra
  * del recorrido. El último paso no necesita `nextLabel`.

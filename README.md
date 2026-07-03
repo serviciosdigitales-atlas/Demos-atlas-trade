@@ -48,9 +48,10 @@ tocar el router.
 Se usa **HashRouter** (`#/demos/...`) para que los deep links y los refrescos de página
 funcionen en GitHub Pages sin configuración de servidor.
 
-## 🎬 Modo demo guiado (recorrido)
+## 🎬 Probar plataforma (recorrido)
 
-Además de abrir cada mock por separado, la galería ofrece un **recorrido guiado**
+La home tiene dos secciones claras: **"Visualizar componentes individuales"** (abrir cada
+pantalla por separado) y **"Probar plataforma"**, un **recorrido encadenado**
 (`#/recorrido`) que **encadena** las pantallas simulando el flujo real: en cada paso, el
 botón correspondiente de la propia pantalla lleva a la siguiente.
 
@@ -75,10 +76,10 @@ aplicación real. El monograma vuelve a la galería.
 src/
   app/
     App.tsx          # router: galería + recorrido + una ruta por demo (desde el registry)
-    Gallery.tsx      # home con las tarjetas de demos + CTA del modo guiado
+    Gallery.tsx      # home: "Probar plataforma" + "Visualizar componentes individuales"
     DemoLayout.tsx   # barra de marca + sub-barra con el título del demo
     BrandBar.tsx     # barra "Atlas Trade · Catálogo de demos" (persistente)
-    GuidedTour.tsx   # modo demo guiado: encadena pantallas (#/recorrido)
+    GuidedTour.tsx   # "Probar plataforma": encadena pantallas (#/recorrido)
     flow.tsx         # DemoFlowContext + useDemoFlow() para avanzar el recorrido
   components/ui/     # componentes shadcn espejados del front real
                      # (button, card, input, label, select, dialog)

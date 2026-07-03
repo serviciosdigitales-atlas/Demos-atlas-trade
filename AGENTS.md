@@ -30,8 +30,10 @@ reflejándola.
 2. Registralo en `src/demos/registry.tsx` (array `demos`). La galería y las rutas se
    generan solas.
 
-## Modo demo guiado (recorrido)
+## Probar plataforma (recorrido)
 
+La home separa **"Visualizar componentes individuales"** (grilla de demos sueltos) de
+**"Probar plataforma"** (recorrido encadenado, `#/recorrido`).
 `src/demos/registry.tsx` exporta `guidedTour`: el orden encadenado de pantallas
 (`#/recorrido`). Los demos usan `useDemoFlow()` (`src/app/flow.tsx`) para avanzar con el
 botón correspondiente cuando corren dentro del recorrido, y conservan su comportamiento
