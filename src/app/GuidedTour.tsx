@@ -38,7 +38,7 @@ export function GuidedTour() {
           <div>
             <h1 className="font-heading text-2xl font-semibold">Recorrido completado</h1>
             <p className="mt-2 max-w-md text-sm text-muted-foreground">
-              Recorriste el flujo Login → Home → Alta de usuario tal como se encadena en la
+              Recorriste el flujo Login → Home → ABM → Alta de usuario tal como se encadena en la
               aplicación real.
             </p>
           </div>

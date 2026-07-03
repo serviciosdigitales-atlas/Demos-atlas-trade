@@ -81,7 +81,8 @@ export interface TourStep {
 
 export const guidedTour: TourStep[] = [
   { slug: "login", nextLabel: "Ingresá para entrar al home" },
-  { slug: "home", nextLabel: "Abrí “Alta de usuario”" },
+  { slug: "home", nextLabel: "Abrí “ABM” en el menú lateral" },
+  { slug: "abm", nextLabel: "En Usuarios, usá Alta → Nuevo usuario" },
   { slug: "alta-usuario" },
 ];
 
