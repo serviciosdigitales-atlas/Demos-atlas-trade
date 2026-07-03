@@ -3,12 +3,15 @@ import { HashRouter, Route, Routes } from "react-router";
 import { demos } from "@/demos/registry";
 import { DemoLayout } from "@/app/DemoLayout";
 import { Gallery } from "@/app/Gallery";
+import { GuidedTour } from "@/app/GuidedTour";
 
 export function App() {
   return (
     <HashRouter>
       <Routes>
         <Route path="/" element={<Gallery />} />
+        {/* Modo demo guiado: encadena las pantallas (#/recorrido) */}
+        <Route path="/recorrido" element={<GuidedTour />} />
         {demos.map((demo) => {
           const Component = demo.component;
           return (

@@ -48,19 +48,44 @@ tocar el router.
 Se usa **HashRouter** (`#/demos/...`) para que los deep links y los refrescos de página
 funcionen en GitHub Pages sin configuración de servidor.
 
+## 🎬 Modo demo guiado (recorrido)
+
+Además de abrir cada mock por separado, la galería ofrece un **recorrido guiado**
+(`#/recorrido`) que **encadena** las pantallas simulando el flujo real: en cada paso, el
+botón correspondiente de la propia pantalla lleva a la siguiente.
+
+```
+Login → (Ingresar) → Home / Dashboard → (Alta de usuario) → Alta de usuario (ABM)
+```
+
+El orden se define en `guidedTour` dentro de `src/demos/registry.tsx`. Los demos detectan
+si están dentro del recorrido con el hook `useDemoFlow()` (`src/app/flow.tsx`): si hay
+recorrido, el botón avanza (`flow.advance()`); si el demo se abrió individual, conserva su
+comportamiento aislado (toast, enlace, etc.).
+
+## 🏷️ Barra de marca persistente
+
+Todas las pantallas de demo muestran arriba una barra **"Atlas Trade · Catálogo de
+demos"** (`src/app/BrandBar.tsx`) para dejar claro que es el catálogo de mockups y no la
+aplicación real. El monograma vuelve a la galería.
+
 ## 📁 Estructura
 
 ```
 src/
   app/
-    App.tsx          # router: galería + una ruta por demo (desde el registry)
-    Gallery.tsx      # home con las tarjetas de demos
-    DemoLayout.tsx   # barra superior "← Galería" que envuelve cada demo
+    App.tsx          # router: galería + recorrido + una ruta por demo (desde el registry)
+    Gallery.tsx      # home con las tarjetas de demos + CTA del modo guiado
+    DemoLayout.tsx   # barra de marca + sub-barra con el título del demo
+    BrandBar.tsx     # barra "Atlas Trade · Catálogo de demos" (persistente)
+    GuidedTour.tsx   # modo demo guiado: encadena pantallas (#/recorrido)
+    flow.tsx         # DemoFlowContext + useDemoFlow() para avanzar el recorrido
   components/ui/     # componentes shadcn espejados del front real
                      # (button, card, input, label, select, dialog)
   demos/
-    registry.tsx     # ← el array de demos (fuente de verdad)
+    registry.tsx     # ← el array de demos + guidedTour (fuente de verdad)
     login/
+    home/            # dashboard post-login: AppShell (sidebar + header) del front real
     alta-usuario/    # ABM usuarios (MAGIA-47): permisos por dominio, AD, validación
   lib/utils.ts       # cn()
   app.css            # tokens de marca Atlas (espejo de atlas-trade-front)

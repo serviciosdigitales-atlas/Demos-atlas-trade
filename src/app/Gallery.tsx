@@ -1,7 +1,8 @@
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, PlayCircle } from "lucide-react";
 import { Link } from "react-router";
 
-import { demos, type DemoEntry } from "@/demos/registry";
+import { demos, guidedTour, getDemo, type DemoEntry } from "@/demos/registry";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardDescription,
@@ -37,10 +38,42 @@ export function Gallery() {
             Mockups, pruebas de concepto y pantallas de trabajo. Cada tarjeta abre un demo
             interactivo construido con el mismo sistema de diseño que el producto real.
           </p>
+          <div className="mt-5">
+            <Button asChild variant="secondary" size="lg">
+              <Link to="/recorrido">
+                <PlayCircle />
+                Iniciar modo demo guiado
+              </Link>
+            </Button>
+          </div>
         </div>
       </header>
 
       <div className="mx-auto max-w-5xl px-6 py-10">
+        {/* Explicación del modo demo guiado */}
+        <Link to="/recorrido" className="group mb-10 block">
+          <div className="flex flex-col gap-3 rounded-xl border border-atlas-primary/20 bg-atlas-primary/5 p-5 sm:flex-row sm:items-center">
+            <span className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-atlas-primary text-white">
+              <PlayCircle className="size-6" />
+            </span>
+            <div className="flex-1">
+              <p className="font-medium">Modo demo guiado</p>
+              <p className="text-sm text-muted-foreground">
+                Un recorrido que encadena las pantallas:{" "}
+                {guidedTour
+                  .map((s) => getDemo(s.slug)?.title)
+                  .filter(Boolean)
+                  .join(" → ")}
+                . Avanzás con el botón de cada pantalla, como en la app real.
+              </p>
+            </div>
+            <span className="flex items-center gap-1 text-sm font-medium text-atlas-primary">
+              Empezar
+              <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
+            </span>
+          </div>
+        </Link>
+
         {categories.map((category) => {
           const items = demos.filter((d) => (d.category ?? "Otros") === category);
           return (

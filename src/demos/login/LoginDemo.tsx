@@ -12,21 +12,26 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useDemoFlow } from "@/app/flow";
 
 export function LoginDemo() {
   const [loading, setLoading] = useState(false);
+  const flow = useDemoFlow();
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
     setTimeout(() => {
       setLoading(false);
-      toast.success("Sesión iniciada (demo)");
+      // En el recorrido guiado, ingresar lleva al dashboard del home.
+      // Individual: solo confirma con un toast.
+      if (flow) flow.advance();
+      else toast.success("Sesión iniciada (demo)");
     }, 700);
   }
 
   return (
-    <div className="flex min-h-[calc(100vh-49px)] items-center justify-center bg-muted/40 p-6">
+    <div className="flex min-h-[calc(100vh-85px)] items-center justify-center bg-muted/40 p-6">
       <Card className="w-full max-w-sm">
         <CardHeader className="items-center text-center">
           <div className="mx-auto mb-2 flex size-12 items-center justify-center rounded-xl bg-atlas-primary font-heading text-lg font-semibold text-white">
