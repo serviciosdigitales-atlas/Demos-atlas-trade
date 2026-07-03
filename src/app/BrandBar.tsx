@@ -20,7 +20,7 @@ export function BrandBar({ right }: { right?: ReactNode }) {
         <span className="flex flex-col leading-none">
           <span className="text-sm font-semibold">Atlas Trade</span>
           <span className="text-[10px] font-medium tracking-wide text-white/70 uppercase">
-            Catálogo de demos
+            Prueba de conceptos / Demo (POC-atlas)
           </span>
         </span>
       </Link>

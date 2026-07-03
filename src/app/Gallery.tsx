@@ -33,7 +33,7 @@ export function Gallery() {
           <p className="text-sm font-medium tracking-wide text-white/70 uppercase">
             Atlas Trade
           </p>
-          <h1 className="mt-1 font-heading text-3xl font-semibold">Catálogo de demos</h1>
+          <h1 className="mt-1 font-heading text-3xl font-semibold">Prueba de conceptos / Demo (POC-atlas)</h1>
           <p className="mt-2 max-w-2xl text-sm text-white/80">
             Mockups, pruebas de concepto y pantallas de trabajo. Cada tarjeta abre un demo
             interactivo construido con el mismo sistema de diseño que el producto real.
