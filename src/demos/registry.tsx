@@ -3,6 +3,7 @@ import type { ComponentType } from "react";
 import { LoginDemo } from "@/demos/login/LoginDemo";
 import { HomeDashboardDemo } from "@/demos/home/HomeDashboardDemo";
 import { AltaUsuarioDemo } from "@/demos/alta-usuario/AltaUsuarioDemo";
+import { AbmDemo } from "@/demos/abm/AbmDemo";
 
 /**
  * Un demo del catálogo. Para agregar uno nuevo:
@@ -51,6 +52,15 @@ export const demos: DemoEntry[] = [
     category: "Usuarios",
     status: "listo",
     component: AltaUsuarioDemo,
+  },
+  {
+    slug: "abm",
+    title: "ABM · Pantalla base",
+    description:
+      "MAGIA-25 · Pestañas EGP, Proveedor, Usuarios y Notificaciones con permisos por rol y menú de alta.",
+    category: "ABM",
+    status: "listo",
+    component: AbmDemo,
   },
 ];
 
