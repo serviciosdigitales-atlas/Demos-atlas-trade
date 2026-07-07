@@ -1,7 +1,7 @@
 import { ArrowRight, PlayCircle } from "lucide-react";
 import { Link } from "react-router";
 
-import { demos, guidedTour, getDemo, type DemoEntry } from "@/demos/registry";
+import { demos, type DemoEntry } from "@/demos/registry";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -65,12 +65,6 @@ export function Gallery() {
               </span>
               <div className="flex-1">
                 <p className="font-medium">Iniciar recorrido de la plataforma</p>
-                <p className="text-sm text-muted-foreground">
-                  {guidedTour
-                    .map((s) => getDemo(s.slug)?.title)
-                    .filter(Boolean)
-                    .join(" → ")}
-                </p>
               </div>
               <span className="flex items-center gap-1 text-sm font-medium text-atlas-primary">
                 Empezar
