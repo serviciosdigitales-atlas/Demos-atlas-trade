@@ -4,6 +4,7 @@ import { LoginDemo } from "@/demos/login/LoginDemo";
 import { HomeDashboardDemo } from "@/demos/home/HomeDashboardDemo";
 import { AltaUsuarioDemo } from "@/demos/alta-usuario/AltaUsuarioDemo";
 import { AbmDemo } from "@/demos/abm/AbmDemo";
+import { MockPermissionsDemo } from "@/demos/mock-permissions/MockPermissionsDemo";
 
 /**
  * Un demo del catálogo. Para agregar uno nuevo:
@@ -30,10 +31,20 @@ export const demos: DemoEntry[] = [
   {
     slug: "login",
     title: "Inicio de sesión",
-    description: "Pantalla de acceso con validación de credenciales.",
+    description:
+      "Pantalla de acceso con Modo Mock: selector dominio/rol y autocompletado de credenciales, igual que el front real.",
     category: "Autenticación",
     status: "listo",
     component: LoginDemo,
+  },
+  {
+    slug: "mock-permisos",
+    title: "Mock · Permisos del usuario",
+    description:
+      "Página de debug del modo mock: datos de la sesión simulada, permisos del rol y agrupación por recurso.",
+    category: "Autenticación",
+    status: "listo",
+    component: MockPermissionsDemo,
   },
   {
     slug: "home",

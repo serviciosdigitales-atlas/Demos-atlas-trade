@@ -1,0 +1,5 @@
+{
+  "banco": ["operador-banco", "supervisor-banco", "admin-banco"],
+  "egp": ["operador-egp", "supervisor-egp", "aprobador-egp", "admin-egp"],
+  "proveedor": ["operador-proveedor", "supervisor-proveedor", "admin-proveedor"]
+}

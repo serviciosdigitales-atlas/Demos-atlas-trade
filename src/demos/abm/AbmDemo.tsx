@@ -16,45 +16,32 @@ import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
 import { PlatformShellDemo } from "@/demos/shared/PlatformShellDemo";
+import {
+  getMockSession,
+  mockResponses,
+  setMockSession,
+} from "@/demos/login/mock-session";
 import { cn } from "@/lib/utils";
+import selectorData from "../../../mock-data/login/mock-selector-dominio-roles.json";
 
-type BancoRole = "admin-banco" | "supervisor-banco" | "operador-banco";
+const domainRoles = selectorData as Record<string, string[]>;
 
 type AbmTab = "egp" | "proveedor" | "usuarios" | "notificaciones";
 
-const ROLE_LABELS: Record<BancoRole, string> = {
-  "admin-banco": "Admin Banco",
-  "supervisor-banco": "Supervisor Banco",
-  "operador-banco": "Operador Banco",
-};
-
-/** Permisos por rol según escenarios de MAGIA-25 (dominio Banco). */
-const ROLE_PERMISSIONS: Record<BancoRole, string[]> = {
-  "admin-banco": [
-    "cargar:usuario-banco",
-    "visualizar:usuario-banco",
-    "visualizar:notificaciones",
-  ],
-  "supervisor-banco": [
-    "visualizar:ente-egp",
-    "cargar:ente-egp",
-    "visualizar:ente-proveedor",
-    "cargar:usuario-banco",
-    "visualizar:usuario-banco",
-    "visualizar:usuario-egp",
-  ],
-  "operador-banco": [
-    "visualizar:ente-egp",
-    "visualizar:ente-proveedor",
-    "visualizar:usuario-egp",
-    "cargar:usuario-egp",
-  ],
-};
+/** "operador-proveedor" → "Operador Proveedor" */
+function roleLabel(role: string): string {
+  return role
+    .split("-")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
 
 const TAB_CONFIG: {
   id: AbmTab;
@@ -128,10 +115,25 @@ function getAltaOptions(activeTab: AbmTab): AltaOption[] {
 export function AbmDemo() {
   const flow = useDemoFlow();
   const navigate = useNavigate();
-  const [role, setRole] = useState<BancoRole>("admin-banco");
+  // Si hay sesión mock iniciada en el login, el ABM arranca con ese rol.
+  const [role, setRole] = useState<string>(
+    () => getMockSession()?.user.role ?? "admin-banco"
+  );
   const [activeTab, setActiveTab] = useState<AbmTab>("usuarios");
 
-  const permissions = useMemo(() => new Set(ROLE_PERMISSIONS[role]), [role]);
+  const sessionActive = getMockSession() !== null;
+  const domain = mockResponses[role]?.user.domain ?? "banco";
+
+  function handleRoleChange(newRole: string) {
+    setRole(newRole);
+    // Mantiene la sesión mock alineada con el rol elegido (sidebar incluido).
+    if (getMockSession()) setMockSession(newRole);
+  }
+
+  const permissions = useMemo(
+    () => new Set(mockResponses[role]?.user.permissions ?? []),
+    [role]
+  );
 
   const visibleTabs = useMemo(
     () => TAB_CONFIG.filter((tab) => tab.canView(permissions)),
@@ -164,7 +166,8 @@ export function AbmDemo() {
   }
 
   return (
-    <PlatformShellDemo activeNav="abm" headerTitle="ABM">
+    // key: refresca el sidebar (usuario e ítem mock) cuando cambia el rol
+    <PlatformShellDemo key={role} activeNav="abm" headerTitle="ABM">
       <div className="mx-auto w-full max-w-6xl p-6">
         <div className="mb-4 flex items-start justify-between gap-4">
           <div>
@@ -184,24 +187,36 @@ export function AbmDemo() {
               Simulación
             </span>
             <div>
-              <p className="text-sm font-medium">Sesión simulada (dominio Banco)</p>
+              <p className="text-sm font-medium">
+                {sessionActive
+                  ? `Sesión mock activa (dominio ${domain})`
+                  : `Sesión simulada (dominio ${domain})`}
+              </p>
               <p className="mt-0.5 max-w-xl text-xs text-muted-foreground">
-                Cambiá el rol para ver qué pestañas y opciones de alta quedan habilitadas según los
-                permisos de MAGIA-25.
+                {sessionActive
+                  ? "El rol viene del Modo Mock del login. Cambialo acá para ver qué pestañas y opciones de alta quedan habilitadas."
+                  : "Cambiá el rol para ver qué pestañas y opciones de alta quedan habilitadas según sus permisos."}
               </p>
             </div>
           </div>
           <div className="flex flex-col gap-1.5 sm:min-w-56">
             <Label className="text-xs text-muted-foreground">Rol del usuario logueado</Label>
-            <Select value={role} onValueChange={(v) => setRole(v as BancoRole)}>
+            <Select value={role} onValueChange={handleRoleChange}>
               <SelectTrigger className="w-full">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {(Object.keys(ROLE_LABELS) as BancoRole[]).map((r) => (
-                  <SelectItem key={r} value={r}>
-                    {ROLE_LABELS[r]}
-                  </SelectItem>
+                {Object.entries(domainRoles).map(([dom, roles]) => (
+                  <SelectGroup key={dom}>
+                    <SelectLabel className="text-[10px] uppercase tracking-wide">
+                      {dom}
+                    </SelectLabel>
+                    {roles.map((r) => (
+                      <SelectItem key={r} value={r}>
+                        {roleLabel(r)}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
                 ))}
               </SelectContent>
             </Select>

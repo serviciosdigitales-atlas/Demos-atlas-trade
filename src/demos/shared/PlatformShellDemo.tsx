@@ -2,6 +2,7 @@ import { useState, type ReactNode } from "react";
 import {
   ArrowRight,
   Database,
+  FlaskConical,
   HomeIcon,
   LogOut,
   PanelLeft,
@@ -17,8 +18,19 @@ import {
 } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { useDemoFlow } from "@/app/flow";
+import { clearMockSession, getMockSession } from "@/demos/login/mock-session";
 
-type NavItem = "home" | "abm";
+type NavItem = "home" | "abm" | "mock-permisos";
+
+/** Iniciales para el avatar, ej. "operador-banco" → "OB". */
+function initialsOf(username: string): string {
+  return username
+    .split("-")
+    .map((part) => part.charAt(0))
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+}
 
 export function PlatformShellDemo({
   activeNav,
@@ -31,6 +43,14 @@ export function PlatformShellDemo({
 }) {
   const flow = useDemoFlow();
   const [collapsed, setCollapsed] = useState(false);
+  // Sesión mock iniciada desde el demo de login (o desde "Permisos (mock)").
+  const [mockSession, setMockSession] = useState(getMockSession);
+
+  const displayName = mockSession?.user.username ?? "Carla Villalba";
+  const displayEmail = mockSession
+    ? `${mockSession.user.username}@atlas.com.py`
+    : "carla.villalba@atlas.com";
+  const displayInitials = mockSession ? initialsOf(mockSession.user.username) : "CV";
 
   const goAbm =
     activeNav === "abm"
@@ -81,6 +101,21 @@ export function PlatformShellDemo({
                 ABM
               </NavAccess>
             </li>
+            {/* Igual que el AppSidebar real: ítem de debug visible solo con sesión mock */}
+            {mockSession && (
+              <li>
+                <NavAccess
+                  collapsed={collapsed}
+                  icon={<FlaskConical className="size-4 shrink-0" />}
+                  active={activeNav === "mock-permisos"}
+                  {...(activeNav === "mock-permisos" || flow
+                    ? {}
+                    : { to: "/demos/mock-permisos" })}
+                >
+                  Permisos (mock)
+                </NavAccess>
+              </li>
+            )}
           </ul>
         </nav>
 
@@ -92,20 +127,26 @@ export function PlatformShellDemo({
             )}
           >
             <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted text-xs font-semibold">
-              CV
+              {displayInitials}
             </span>
             {!collapsed && (
               <div className="grid flex-1 leading-tight">
-                <span className="truncate text-sm font-semibold">Carla Villalba</span>
-                <span className="truncate text-xs text-muted-foreground">
-                  carla.villalba@atlas.com
-                </span>
+                <span className="truncate text-sm font-semibold">{displayName}</span>
+                <span className="truncate text-xs text-muted-foreground">{displayEmail}</span>
               </div>
             )}
             {!collapsed && (
               <button
                 type="button"
-                onClick={() => toast.info("Cerrar sesión (demo)")}
+                onClick={() => {
+                  if (mockSession) {
+                    clearMockSession();
+                    setMockSession(null);
+                    toast.info("Sesión mock cerrada");
+                  } else {
+                    toast.info("Cerrar sesión (demo)");
+                  }
+                }}
                 className="text-muted-foreground hover:text-foreground"
                 aria-label="Cerrar sesión"
               >

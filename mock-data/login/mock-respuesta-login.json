@@ -1,0 +1,163 @@
+{
+  "operador-banco": {
+    "token": "mock-token-operador-banco",
+    "user": {
+      "id": 1,
+      "username": "operador-banco",
+      "role": "operador-banco",
+      "domain": "banco",
+      "permissions": [
+        "cargar:ente-egp",
+        "visualizar:ente-egp",
+        "cargar:usuario-egp",
+        "visualizar:usuario-egp"
+      ]
+    }
+  },
+  "supervisor-banco": {
+    "token": "mock-token-supervisor-banco",
+    "user": {
+      "id": 2,
+      "username": "supervisor-banco",
+      "role": "supervisor-banco",
+      "domain": "banco",
+      "permissions": [
+        "visualizar:ente-egp",
+        "modificar:ente-egp",
+        "bloquear:ente-egp",
+        "visualizar:ente-proveedor",
+        "cargar:usuario-banco",
+        "visualizar:usuario-banco",
+        "aprobar-alta:usuario-egp",
+        "visualizar:usuario-egp"
+      ]
+    }
+  },
+  "admin-banco": {
+    "token": "mock-token-admin-banco",
+    "user": {
+      "id": 3,
+      "username": "admin-banco",
+      "role": "admin-banco",
+      "domain": "banco",
+      "permissions": [
+        "cargar:usuario-banco",
+        "aprobar-alta:usuario-banco",
+        "visualizar:usuario-banco",
+        "modificar:usuario-banco",
+        "bloquear:usuario-banco",
+        "visualizar:notificaciones",
+        "activar/desactivar:notificaciones"
+      ]
+    }
+  },
+  "operador-egp": {
+    "token": "mock-token-operador-egp",
+    "user": {
+      "id": 4,
+      "username": "operador-egp",
+      "role": "operador-egp",
+      "domain": "egp",
+      "permissions": [
+        "cargar:ente-proveedor",
+        "cargar:usuario-proveedor",
+        "visualizar:usuario-proveedor"
+      ]
+    }
+  },
+  "supervisor-egp": {
+    "token": "mock-token-supervisor-egp",
+    "user": {
+      "id": 5,
+      "username": "supervisor-egp",
+      "role": "supervisor-egp",
+      "domain": "egp",
+      "permissions": [
+        "visualizar:ente-egp",
+        "aprobar-alta:ente-proveedor",
+        "visualizar:ente-proveedor",
+        "modificar:ente-proveedor",
+        "bloquear:ente-proveedor",
+        "cargar:usuario-egp",
+        "visualizar:usuario-egp",
+        "aprobar-alta:usuario-proveedor",
+        "visualizar:usuario-proveedor"
+      ]
+    }
+  },
+  "aprobador-egp": {
+    "token": "mock-token-aprobador-egp",
+    "user": {
+      "id": 6,
+      "username": "aprobador-egp",
+      "role": "aprobador-egp",
+      "domain": "egp",
+      "permissions": ["visualizar:ente-proveedor"]
+    }
+  },
+  "admin-egp": {
+    "token": "mock-token-admin-egp",
+    "user": {
+      "id": 7,
+      "username": "admin-egp",
+      "role": "admin-egp",
+      "domain": "egp",
+      "permissions": [
+        "cargar:usuario-egp",
+        "aprobar-alta:usuario-egp",
+        "visualizar:usuario-egp",
+        "modificar:usuario-egp",
+        "bloquear:usuario-egp",
+        "visualizar:notificaciones",
+        "activar/desactivar:notificaciones"
+      ]
+    }
+  },
+  "supervisor-proveedor": {
+    "token": "mock-token-supervisor-proveedor",
+    "user": {
+      "id": 8,
+      "username": "supervisor-proveedor",
+      "role": "supervisor-proveedor",
+      "domain": "proveedor",
+      "permissions": [
+        "visualizar:ente-egp",
+        "visualizar:ente-proveedor",
+        "modificar:ente-proveedor",
+        "cargar:usuario-proveedor",
+        "visualizar:usuario-proveedor",
+        "cargar:datos-bancarios-proveedor",
+        "visualizar:datos-bancarios-proveedor",
+        "modificar:datos-bancarios-proveedor"
+      ]
+    }
+  },
+  "admin-proveedor": {
+    "token": "mock-token-admin-proveedor",
+    "user": {
+      "id": 9,
+      "username": "admin-proveedor",
+      "role": "admin-proveedor",
+      "domain": "proveedor",
+      "permissions": [
+        "cargar:usuario-proveedor",
+        "aprobar-alta:usuario-proveedor",
+        "visualizar:usuario-proveedor",
+        "modificar:usuario-proveedor",
+        "bloquear:usuario-proveedor",
+        "visualizar:notificaciones",
+        "activar/desactivar:notificaciones"
+      ]
+    }
+  },
+  "operador-proveedor": {
+    "token": "mock-token-operador-proveedor",
+    "user": {
+      "id": 9,
+      "username": "operador-proveedor",
+      "role": "operador-proveedor",
+      "domain": "proveedor",
+      "permissions": []
+    }
+  }
+}
