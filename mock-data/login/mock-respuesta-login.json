@@ -7,9 +7,9 @@
       "role": "operador-banco",
       "domain": "banco",
       "permissions": [
-        "cargar:ente-egp",
-        "visualizar:ente-egp",
         "cargar:usuario-egp",
+        "visualizar:ente-egp",
+        "visualizar:ente-proveedor",
         "visualizar:usuario-egp"
       ]
     }
@@ -22,13 +22,14 @@
       "role": "supervisor-banco",
       "domain": "banco",
       "permissions": [
-        "visualizar:ente-egp",
-        "modificar:ente-egp",
-        "bloquear:ente-egp",
-        "visualizar:ente-proveedor",
-        "cargar:usuario-banco",
-        "visualizar:usuario-banco",
         "aprobar-alta:usuario-egp",
+        "bloquear:ente-egp",
+        "cargar:ente-egp",
+        "cargar:usuario-banco",
+        "modificar:ente-egp",
+        "visualizar:ente-egp",
+        "visualizar:ente-proveedor",
+        "visualizar:usuario-banco",
         "visualizar:usuario-egp"
       ]
     }
@@ -41,13 +42,13 @@
       "role": "admin-banco",
       "domain": "banco",
       "permissions": [
-        "cargar:usuario-banco",
+        "activar/desactivar:notificaciones",
         "aprobar-alta:usuario-banco",
-        "visualizar:usuario-banco",
-        "modificar:usuario-banco",
         "bloquear:usuario-banco",
+        "cargar:usuario-banco",
+        "modificar:usuario-banco",
         "visualizar:notificaciones",
-        "activar/desactivar:notificaciones"
+        "visualizar:usuario-banco"
       ]
     }
   },
@@ -61,6 +62,7 @@
       "permissions": [
         "cargar:ente-proveedor",
         "cargar:usuario-proveedor",
+        "visualizar:ente-proveedor",
         "visualizar:usuario-proveedor"
       ]
     }
@@ -73,14 +75,14 @@
       "role": "supervisor-egp",
       "domain": "egp",
       "permissions": [
-        "visualizar:ente-egp",
         "aprobar-alta:ente-proveedor",
-        "visualizar:ente-proveedor",
-        "modificar:ente-proveedor",
+        "aprobar-alta:usuario-proveedor",
         "bloquear:ente-proveedor",
         "cargar:usuario-egp",
+        "modificar:ente-proveedor",
+        "visualizar:ente-egp",
+        "visualizar:ente-proveedor",
         "visualizar:usuario-egp",
-        "aprobar-alta:usuario-proveedor",
         "visualizar:usuario-proveedor"
       ]
     }
@@ -92,7 +94,7 @@
       "username": "aprobador-egp",
       "role": "aprobador-egp",
       "domain": "egp",
-      "permissions": ["visualizar:ente-proveedor"]
+      "permissions": []
     }
   },
   "admin-egp": {
@@ -103,13 +105,13 @@
       "role": "admin-egp",
       "domain": "egp",
       "permissions": [
-        "cargar:usuario-egp",
+        "activar/desactivar:notificaciones",
         "aprobar-alta:usuario-egp",
-        "visualizar:usuario-egp",
-        "modificar:usuario-egp",
         "bloquear:usuario-egp",
+        "cargar:usuario-egp",
+        "modificar:usuario-egp",
         "visualizar:notificaciones",
-        "activar/desactivar:notificaciones"
+        "visualizar:usuario-egp"
       ]
     }
   },
@@ -121,14 +123,13 @@
       "role": "supervisor-proveedor",
       "domain": "proveedor",
       "permissions": [
-        "visualizar:ente-egp",
-        "visualizar:ente-proveedor",
-        "modificar:ente-proveedor",
-        "cargar:usuario-proveedor",
-        "visualizar:usuario-proveedor",
         "cargar:datos-bancarios-proveedor",
+        "cargar:usuario-proveedor",
+        "modificar:datos-bancarios-proveedor",
+        "modificar:ente-proveedor",
         "visualizar:datos-bancarios-proveedor",
-        "modificar:datos-bancarios-proveedor"
+        "visualizar:ente-proveedor",
+        "visualizar:usuario-proveedor"
       ]
     }
   },
@@ -140,13 +141,13 @@
       "role": "admin-proveedor",
       "domain": "proveedor",
       "permissions": [
-        "cargar:usuario-proveedor",
+        "activar/desactivar:notificaciones",
         "aprobar-alta:usuario-proveedor",
-        "visualizar:usuario-proveedor",
-        "modificar:usuario-proveedor",
         "bloquear:usuario-proveedor",
+        "cargar:usuario-proveedor",
+        "modificar:usuario-proveedor",
         "visualizar:notificaciones",
-        "activar/desactivar:notificaciones"
+        "visualizar:usuario-proveedor"
       ]
     }
   },

@@ -68,7 +68,7 @@ export const demos: DemoEntry[] = [
     slug: "abm",
     title: "ABM · Pantalla base",
     description:
-      "MAGIA-25 · Pestañas EGP, Proveedor, Usuarios y Notificaciones con permisos por rol y menú de alta.",
+      "MAGIA-25/30/35 · Pestañas con permisos por rol, grilla de Usuarios con filtros y paginado, y acciones por fila según permisos.",
     category: "ABM",
     status: "listo",
     component: AbmDemo,

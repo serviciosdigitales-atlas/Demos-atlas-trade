@@ -1,0 +1,74 @@
+[
+  {
+    "nombre": "María",
+    "apellido": "González",
+    "ci": "4521789",
+    "mail": "maria.gonzalez@empresa.com.py",
+    "telefono": "0981123456",
+    "acceso": "Activo",
+    "estado": "Autorizado",
+    "dominio": "egp",
+    "ente": "Distribuidora Central S.A.",
+    "rol": "admin-egp"
+  },
+  {
+    "nombre": "María",
+    "apellido": "González",
+    "ci": "4521789",
+    "mail": "maria.gonzalez@empresa.com.py",
+    "telefono": "0981123456",
+    "acceso": "Activo",
+    "estado": "Autorizado",
+    "dominio": "proveedor",
+    "ente": "Proveedora del Sur",
+    "rol": "operador-proveedor"
+  },
+  {
+    "nombre": "Carlos",
+    "apellido": "Benítez",
+    "ci": "3892456",
+    "mail": "c.benitez@banco.com.py",
+    "telefono": "0971987654",
+    "acceso": "Bloqueado",
+    "estado": "Pendiente de Autorización",
+    "dominio": "banco",
+    "ente": "Banco Atlas",
+    "rol": "operador-banco"
+  },
+  {
+    "nombre": "Ana",
+    "apellido": "Rodríguez",
+    "ci": "5100234",
+    "mail": "ana.rodriguez@logistica.com.py",
+    "telefono": "0991555666",
+    "acceso": "Activo",
+    "estado": "Autorizado",
+    "dominio": "egp",
+    "ente": "Logística Norte S.R.L.",
+    "rol": "operador-egp"
+  },
+  {
+    "nombre": "Pedro",
+    "apellido": "Fernández",
+    "ci": "2734510",
+    "mail": "p.fernandez@banco.com.py",
+    "telefono": "0961222333",
+    "acceso": "Activo",
+    "estado": "Autorizado",
+    "dominio": "banco",
+    "ente": "Banco Atlas",
+    "rol": "admin-banco"
+  },
+  {
+    "nombre": "Lucía",
+    "apellido": "Martínez",
+    "ci": "6012987",
+    "mail": "lucia.martinez@insumos.com.py",
+    "telefono": "0983444555",
+    "acceso": "Activo",
+    "estado": "Pendiente de Autorización",
+    "dominio": "proveedor",
+    "ente": "Insumos del Este S.A.",
+    "rol": "admin-proveedor"
+  }
+]
