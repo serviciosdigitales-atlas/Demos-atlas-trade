@@ -43,7 +43,7 @@ function roleLabel(role: string): string {
     .join(" ");
 }
 
-const TAB_CONFIG: {
+export const TAB_CONFIG: {
   id: AbmTab;
   label: string;
   canView: (permissions: Set<string>) => boolean;
@@ -85,6 +85,11 @@ type AltaOption = {
   label: string;
   permission: string | string[];
 };
+
+/** Indica si el usuario tiene acceso a al menos una sección del ABM (usado por el menú lateral). */
+export function hasAbmAccess(permissions: Set<string>): boolean {
+  return TAB_CONFIG.some((tab) => tab.canView(permissions));
+}
 
 function hasPermission(permissions: Set<string>, permission: string | string[]) {
   if (Array.isArray(permission)) {

@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import {
   ArrowRight,
   Database,
@@ -19,6 +19,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useDemoFlow } from "@/app/flow";
 import { clearMockSession, getMockSession } from "@/demos/login/mock-session";
+import { hasAbmAccess } from "@/demos/abm/AbmDemo";
 
 type NavItem = "home" | "abm" | "mock-permisos";
 
@@ -59,6 +60,13 @@ export function PlatformShellDemo({
         ? { onClick: flow.advance }
         : { to: "/demos/abm" };
 
+  // Si el usuario no tiene ningún permiso de ABM, el ítem no se muestra en el menú.
+  const permissions = useMemo(
+    () => new Set(mockSession?.user.permissions ?? []),
+    [mockSession]
+  );
+  const showAbm = hasAbmAccess(permissions);
+
   return (
     <div className="flex min-h-[calc(100vh-85px)] w-full bg-background">
       <aside
@@ -91,16 +99,18 @@ export function PlatformShellDemo({
                 Inicio
               </NavAccess>
             </li>
-            <li>
-              <NavAccess
-                collapsed={collapsed}
-                icon={<Database className="size-4 shrink-0" />}
-                active={activeNav === "abm"}
-                {...goAbm}
-              >
-                ABM
-              </NavAccess>
-            </li>
+            {showAbm && (
+              <li>
+                <NavAccess
+                  collapsed={collapsed}
+                  icon={<Database className="size-4 shrink-0" />}
+                  active={activeNav === "abm"}
+                  {...goAbm}
+                >
+                  ABM
+                </NavAccess>
+              </li>
+            )}
             {/* Igual que el AppSidebar real: ítem de debug visible solo con sesión mock */}
             {mockSession && (
               <li>
