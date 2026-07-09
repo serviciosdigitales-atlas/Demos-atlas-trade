@@ -1,0 +1,112 @@
+[
+  {
+    "id": "ntf-01",
+    "nombre": "Alta de factura recibida",
+    "evento": "Factura Pendiente",
+    "dominio": "egp",
+    "rol": "admin",
+    "tipo": "dominio-rol",
+    "emails": [],
+    "mensaje": "Se cargó una nueva factura en la plataforma y quedó pendiente de habilitación. Ingresá a la bandeja de facturas para revisarla y continuar el circuito.",
+    "estado": "Activa"
+  },
+  {
+    "id": "ntf-02",
+    "nombre": "Factura habilitada para adelanto",
+    "evento": "Factura Habilitada",
+    "dominio": "proveedor",
+    "rol": "admin",
+    "tipo": "dominio-rol",
+    "emails": [],
+    "mensaje": "Tu factura fue habilitada y ya puede incluirse en una simulación de adelanto. Podés iniciar la solicitud desde la grilla de facturas.",
+    "estado": "Activa"
+  },
+  {
+    "id": "ntf-03",
+    "nombre": "Solicitud pendiente de aprobación EGP",
+    "evento": "Pendiente Aprobación EGP",
+    "dominio": "egp",
+    "rol": "admin",
+    "tipo": "dominio-rol",
+    "emails": [],
+    "mensaje": "Hay una solicitud de adelanto de facturas esperando tu aprobación. Revisá el detalle de la operación antes de confirmar o rechazar.",
+    "estado": "Activa"
+  },
+  {
+    "id": "ntf-04",
+    "nombre": "Solicitud pendiente de aprobación Banco",
+    "evento": "Pendiente Aprobación Banco",
+    "dominio": "banco",
+    "rol": "operador",
+    "tipo": "mail",
+    "emails": ["mesa.confirming@bancoatlas.com.py"],
+    "mensaje": "Una solicitud de adelanto superó la aprobación del EGP y está pendiente de aprobación del Banco. Verificá la línea de crédito disponible antes de aprobar el desembolso.",
+    "estado": "Activa"
+  },
+  {
+    "id": "ntf-05",
+    "nombre": "Desembolso en proceso",
+    "evento": "Pendiente de Desembolso",
+    "dominio": "proveedor",
+    "rol": "admin",
+    "tipo": "dominio-rol",
+    "emails": [],
+    "mensaje": "Tu adelanto fue aprobado y el desembolso está en proceso. Vas a recibir la acreditación en la cuenta registrada dentro de las próximas 24 horas hábiles.",
+    "estado": "Inactiva"
+  },
+  {
+    "id": "ntf-06",
+    "nombre": "Operación financiada",
+    "evento": "Financiada",
+    "dominio": "egp",
+    "rol": "operador",
+    "tipo": "mail",
+    "emails": ["tesoreria@distribuidoracentral.com.py", "pagos@distribuidoracentral.com.py"],
+    "mensaje": "La operación de adelanto fue financiada correctamente. El detalle del desembolso y el cronograma de vencimientos ya están disponibles en el módulo de reportes.",
+    "estado": "Activa"
+  },
+  {
+    "id": "ntf-07",
+    "nombre": "Factura próxima a vencer",
+    "evento": "Vencida",
+    "dominio": "banco",
+    "rol": "admin",
+    "tipo": "dominio-rol",
+    "emails": [],
+    "mensaje": "Existen facturas que vencieron sin ser incluidas en ninguna operación. Revisá la grilla de facturas vencidas para depurar la cartera.",
+    "estado": "Inactiva"
+  },
+  {
+    "id": "ntf-08",
+    "nombre": "Factura bloqueada por el EGP",
+    "evento": "Bloqueada",
+    "dominio": "proveedor",
+    "rol": "operador",
+    "tipo": "dominio-rol",
+    "emails": [],
+    "mensaje": "Una de tus facturas fue bloqueada por el EGP y no podrá incluirse en simulaciones de adelanto hasta que sea desbloqueada. Contactá a tu EGP para más información.",
+    "estado": "Activa"
+  },
+  {
+    "id": "ntf-09",
+    "nombre": "Alta de ente pendiente de autorización",
+    "evento": "Factura Pendiente",
+    "dominio": "egp",
+    "rol": "admin",
+    "tipo": "mail",
+    "emails": ["abm@agroeste.com.py"],
+    "mensaje": "Se registró un nuevo ente que quedó pendiente de autorización. Ingresá a la pantalla de Gestión ABM para autorizar o rechazar el alta.",
+    "estado": "Activa"
+  },
+  {
+    "id": "ntf-10",
+    "nombre": "Recordatorio de vencimiento de línea",
+    "evento": "Vencida",
+    "dominio": "banco",
+    "rol": "operador",
+    "tipo": "mail",
+    "emails": ["riesgos@bancoatlas.com.py"],
+    "mensaje": "La línea de crédito de un EGP está próxima a su fecha de revisión anual. Coordiná con el oficial de cuentas la actualización de la carpeta crediticia para evitar bloqueos operativos.",
+    "estado": "Inactiva"
+  }
+]

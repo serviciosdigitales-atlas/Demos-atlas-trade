@@ -7,6 +7,13 @@
       "runtimeArgs": ["dev", "--port", "3002", "--strictPort"],
       "port": 3002,
       "autoPort": false
+    },
+    {
+      "name": "dev-verify",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["dev", "--port", "3011", "--strictPort"],
+      "port": 3011,
+      "autoPort": false
     }
   ]
 }

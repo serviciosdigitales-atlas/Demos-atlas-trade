@@ -24,6 +24,7 @@
       "permissions": [
         "aprobar-alta:usuario-egp",
         "bloquear:ente-egp",
+        "borrar:ente-egp",
         "cargar:ente-egp",
         "cargar:usuario-banco",
         "modificar:ente-egp",
@@ -62,7 +63,6 @@
       "permissions": [
         "cargar:ente-proveedor",
         "cargar:usuario-proveedor",
-        "visualizar:ente-proveedor",
         "visualizar:usuario-proveedor"
       ]
     }
@@ -78,10 +78,9 @@
         "aprobar-alta:ente-proveedor",
         "aprobar-alta:usuario-proveedor",
         "bloquear:ente-proveedor",
+        "borrar:ente-proveedor",
         "cargar:usuario-egp",
         "modificar:ente-proveedor",
-        "visualizar:ente-egp",
-        "visualizar:ente-proveedor",
         "visualizar:usuario-egp",
         "visualizar:usuario-proveedor"
       ]
@@ -126,9 +125,7 @@
         "cargar:datos-bancarios-proveedor",
         "cargar:usuario-proveedor",
         "modificar:datos-bancarios-proveedor",
-        "modificar:ente-proveedor",
         "visualizar:datos-bancarios-proveedor",
-        "visualizar:ente-proveedor",
         "visualizar:usuario-proveedor"
       ]
     }

@@ -1,0 +1,93 @@
+[
+  {
+    "id": "egp-01",
+    "ruc": "80012345-6",
+    "razonSocial": "Distribuidora Central S.A.",
+    "email": "contacto@distribuidoracentral.com.py",
+    "telefono": "021555001",
+    "monedas": ["PYG", "USD"],
+    "lineaCredito": { "currencyCode": "PYG", "amount": 1500000000 },
+    "clienteAtlas": true,
+    "estado": "Activo",
+    "facturas": "en-curso",
+    "proveedoresAsociados": 4
+  },
+  {
+    "id": "egp-02",
+    "ruc": "80023456-7",
+    "razonSocial": "Agroindustrial del Este S.A.E.",
+    "email": "administracion@agroeste.com.py",
+    "telefono": "061555200",
+    "monedas": ["PYG"],
+    "lineaCredito": { "currencyCode": "PYG", "amount": 850000000 },
+    "clienteAtlas": true,
+    "estado": "Activo",
+    "facturas": "pendientes",
+    "proveedoresAsociados": 0
+  },
+  {
+    "id": "egp-03",
+    "ruc": "80034567-8",
+    "razonSocial": "Constructora Guaraní S.R.L.",
+    "email": "info@construguarani.com.py",
+    "telefono": "021555340",
+    "monedas": ["USD"],
+    "lineaCredito": { "currencyCode": "USD", "amount": 250000 },
+    "clienteAtlas": false,
+    "estado": "Activo",
+    "facturas": "ninguna",
+    "proveedoresAsociados": 2
+  },
+  {
+    "id": "egp-04",
+    "ruc": "80045678-9",
+    "razonSocial": "Importadora del Sur S.A.",
+    "email": "compras@importsur.com.py",
+    "telefono": "021555410",
+    "monedas": [],
+    "lineaCredito": null,
+    "clienteAtlas": null,
+    "estado": "Pendiente de Autorización",
+    "facturas": "ninguna",
+    "proveedoresAsociados": 0
+  },
+  {
+    "id": "egp-05",
+    "ruc": "80056789-0",
+    "razonSocial": "Frigorífico Ñemby S.A.",
+    "email": "gerencia@friginemby.com.py",
+    "telefono": "021555520",
+    "monedas": ["PYG", "USD"],
+    "lineaCredito": { "currencyCode": "USD", "amount": 480000 },
+    "clienteAtlas": true,
+    "estado": "Bloqueado",
+    "facturas": "pendientes",
+    "proveedoresAsociados": 1
+  },
+  {
+    "id": "egp-06",
+    "ruc": "80067890-1",
+    "razonSocial": "Textil Paraguaya S.A.",
+    "email": "ventas@textilpar.com.py",
+    "telefono": "021555630",
+    "monedas": ["PYG"],
+    "lineaCredito": null,
+    "clienteAtlas": false,
+    "estado": "Autorizado",
+    "facturas": "ninguna",
+    "proveedoresAsociados": 0
+  },
+  {
+    "id": "egp-07",
+    "ruc": "80078901-2",
+    "razonSocial": "Cadena Retail Asunción S.A.",
+    "email": "pagos@retailasu.com.py",
+    "telefono": "021555740",
+    "monedas": ["PYG"],
+    "lineaCredito": { "currencyCode": "PYG", "amount": 2300000000 },
+    "clienteAtlas": true,
+    "estado": "Activo",
+    "facturas": "ninguna",
+    "proveedoresAsociados": 0
+  }
+]

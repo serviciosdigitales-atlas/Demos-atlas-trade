@@ -1,0 +1,106 @@
+[
+  {
+    "id": "prov-01",
+    "ruc": "80111222-3",
+    "razonSocial": "Proveedora del Sur",
+    "egpPadre": "Distribuidora Central S.A.",
+    "email": "facturacion@provsur.com.py",
+    "telefono": "021666100",
+    "clienteAtlas": true,
+    "estado": "Activo",
+    "facturas": "en-curso"
+  },
+  {
+    "id": "prov-02",
+    "ruc": "80122333-4",
+    "razonSocial": "Insumos Agrícolas Itapúa S.R.L.",
+    "egpPadre": "Agroindustrial del Este S.A.E.",
+    "email": "ventas@insumositapua.com.py",
+    "telefono": "071666210",
+    "clienteAtlas": false,
+    "estado": "Activo",
+    "facturas": "pendientes",
+    "datosBancarios": {
+      "cuentaCredito": "001-234567-89",
+      "banco": "Banco Regional",
+      "moneda": "PYG",
+      "tipoDocumento": "CI",
+      "numeroDocumento": "3456789",
+      "nombreApellido": "Ramón Ayala"
+    }
+  },
+  {
+    "id": "prov-03",
+    "ruc": "80133444-5",
+    "razonSocial": "Metalúrgica Capiatá S.A.",
+    "egpPadre": "Constructora Guaraní S.R.L.",
+    "email": "admin@metalcapiata.com.py",
+    "telefono": "0228666320",
+    "clienteAtlas": true,
+    "estado": "Bloqueado",
+    "facturas": "pendientes"
+  },
+  {
+    "id": "prov-04",
+    "ruc": "80144555-6",
+    "razonSocial": "Transporte Fluvial Py S.A.",
+    "egpPadre": "Distribuidora Central S.A.",
+    "email": "operaciones@transfluvial.com.py",
+    "telefono": "021666430",
+    "clienteAtlas": null,
+    "estado": "Pendiente de Autorización",
+    "facturas": "ninguna"
+  },
+  {
+    "id": "prov-05",
+    "ruc": "80155666-7",
+    "razonSocial": "Servicios Gráficos Lambaré",
+    "egpPadre": "Cadena Retail Asunción S.A.",
+    "email": "contacto@graficoslambare.com.py",
+    "telefono": "021666540",
+    "clienteAtlas": false,
+    "estado": "Rechazado",
+    "facturas": "ninguna",
+    "datosBancarios": {
+      "cuentaCredito": "002-987654-32",
+      "banco": "Banco Continental",
+      "moneda": "USD",
+      "tipoDocumento": "RUC",
+      "numeroDocumento": "80155666-7",
+      "nombreApellido": "Lucía Franco"
+    }
+  },
+  {
+    "id": "prov-06",
+    "ruc": "80166777-8",
+    "razonSocial": "Química Industrial CDE S.A.",
+    "egpPadre": "Agroindustrial del Este S.A.E.",
+    "email": "compras@quimicacde.com.py",
+    "telefono": "061666650",
+    "clienteAtlas": true,
+    "estado": "Activo",
+    "facturas": "ninguna"
+  },
+  {
+    "id": "prov-07",
+    "ruc": "80177888-9",
+    "razonSocial": "Limpieza Total S.R.L.",
+    "egpPadre": "Cadena Retail Asunción S.A.",
+    "email": "administracion@limpiezatotal.com.py",
+    "telefono": "021666760",
+    "clienteAtlas": null,
+    "estado": "Pendiente de Autorización",
+    "facturas": "ninguna"
+  },
+  {
+    "id": "prov-08",
+    "ruc": "80188999-0",
+    "razonSocial": "Repuestos Mariano Roque Alonso",
+    "egpPadre": "Distribuidora Central S.A.",
+    "email": "ventas@repuestosmra.com.py",
+    "telefono": "021666870",
+    "clienteAtlas": true,
+    "estado": "Autorizado",
+    "facturas": "ninguna"
+  }
+]

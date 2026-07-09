@@ -1,16 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import {
-  Check,
-  ChevronDown,
-  ChevronLeft,
-  ChevronRight,
-  Eye,
-  Lock,
-  Pencil,
-  Plus,
-  type LucideIcon,
-} from "lucide-react";
-import { useNavigate } from "react-router";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Check, ChevronDown, Eye, Lock, Pencil, Plus } from "lucide-react";
 import { toast } from "sonner";
 
 import { useDemoFlow } from "@/app/flow";
@@ -39,9 +28,34 @@ import {
   mockResponses,
   setMockSession,
 } from "@/demos/login/mock-session";
+import {
+  ALTA_USUARIO_SEEDS,
+  AltaUsuarioDialog,
+  type Dominio,
+  type Usuario,
+} from "@/demos/alta-usuario/AltaUsuarioDialog";
+import { RolePickerDialog, roleLabel } from "@/demos/shared/RolePickerDialog";
 import { cn } from "@/lib/utils";
 import usuariosData from "../../../mock-data/abm/usuarios.json";
 import selectorData from "../../../mock-data/login/mock-selector-dominio-roles.json";
+import {
+  canAccessEntity,
+  egpRows,
+  FilterField,
+  FilterPanel,
+  GridPager,
+  HEADER_INPUT_CLASS,
+  HEADER_SELECT_CLASS,
+  logAuditoria,
+  proveedorRows,
+  RowIconButton,
+  StatusPill,
+  type EnteRow,
+  type EnteTipo,
+} from "./abm-shared";
+import { AltaEnteDialog } from "./AltaEnteDialog";
+import { EntesGrid } from "./EntesGrid";
+import { NotificacionesGrid } from "./NotificacionesGrid";
 
 const domainRoles = selectorData as Record<string, string[]>;
 
@@ -65,28 +79,35 @@ type UsuarioRow = {
 
 const usuarios = usuariosData as UsuarioRow[];
 
-/** "operador-proveedor" → "Operador Proveedor" */
-function roleLabel(role: string): string {
-  return role
-    .split("-")
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(" ");
-}
+/** Dominio de la sesión mock → dominio del modal de alta de usuario. */
+const DOMINIO_DIALOG: Record<string, Dominio> = {
+  banco: "Banco",
+  egp: "EGP",
+  proveedor: "Proveedor",
+};
+
+const CARGAR_USUARIO_PERMISOS = [
+  "cargar:usuario-banco",
+  "cargar:usuario-egp",
+  "cargar:usuario-proveedor",
+];
 
 export const TAB_CONFIG: {
   id: AbmTab;
   label: string;
   canView: (permissions: Set<string>) => boolean;
 }[] = [
+  // Regla acordada con funcional: la pestaña se ve con visualizar:<entidad>
+  // o con cualquier permiso de acción sobre la entidad (ver abm-shared).
   {
     id: "egp",
     label: "EGP",
-    canView: (p) => p.has("visualizar:ente-egp"),
+    canView: (p) => canAccessEntity(p, "ente-egp"),
   },
   {
     id: "proveedor",
     label: "Proveedor",
-    canView: (p) => p.has("visualizar:ente-proveedor"),
+    canView: (p) => canAccessEntity(p, "ente-proveedor"),
   },
   {
     id: "usuarios",
@@ -99,35 +120,28 @@ export const TAB_CONFIG: {
   {
     id: "notificaciones",
     label: "Notificaciones",
-    canView: (p) => p.has("visualizar:notificaciones"),
+    canView: (p) =>
+      p.has("visualizar:notificaciones") || p.has("activar/desactivar:notificaciones"),
   },
 ];
 
-const GRID_COLUMNS: Record<AbmTab, string[]> = {
-  egp: ["Nombre", "RUC", "Estado", "Fecha alta"],
-  proveedor: ["Razón social", "RUC", "Estado", "EGP vinculado"],
-  usuarios: [
-    "Nombre",
-    "Apellido",
-    "CI",
-    "Mail",
-    "Teléfono",
-    "Acceso",
-    "Estado",
-    "Acciones",
-    "Dominio",
-    "Ente asociado",
-    "Rol",
-  ],
-  notificaciones: ["Evento", "Canal", "Destinatario", "Estado"],
-};
-
-const USUARIOS_PAGE_SIZE = 25;
+const USUARIOS_COLUMNS = [
+  "Nombre",
+  "Apellido",
+  "CI",
+  "Mail",
+  "Teléfono",
+  "Acceso",
+  "Estado",
+  "Acciones",
+  "Dominio",
+  "Ente asociado",
+  "Rol",
+];
 
 const ACCESO_OPTIONS = ["Activo", "Bloqueado"];
 const ESTADO_OPTIONS = ["Pendiente de Autorización", "Autorizado"];
 const DOMINIO_OPTIONS: UsuarioDominio[] = ["banco", "egp", "proveedor"];
-const ROL_OPTIONS = [...new Set(usuarios.map((u) => u.rol))];
 
 /**
  * MAGIA-35: acciones habilitadas para una fila según los permisos del rol
@@ -187,49 +201,11 @@ function getAltaOptions(activeTab: AbmTab): AltaOption[] {
   }
 }
 
-const PILL_TONES = {
-  green: "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300",
-  red: "bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300",
-  amber: "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300",
-};
-
-function StatusPill({ text, tone }: { text: string; tone: keyof typeof PILL_TONES }) {
-  return (
-    <span
-      className={cn(
-        "inline-block rounded-full px-2 py-0.5 text-[11px] font-medium whitespace-nowrap",
-        PILL_TONES[tone]
-      )}
-    >
-      {text}
-    </span>
-  );
-}
-
-function RowActionButton({
-  icon: Icon,
-  label,
-  row,
-}: {
-  icon: LucideIcon;
-  label: string;
-  row: UsuarioRow;
-}) {
-  return (
-    <button
-      type="button"
-      title={label}
-      onClick={() =>
-        toast.info(
-          `«${label}» sobre ${row.nombre} ${row.apellido} (${row.ente}) — acción mock, sin backend.`,
-          { duration: 4000 }
-        )
-      }
-      className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-    >
-      <Icon className="size-4" />
-      <span className="sr-only">{label}</span>
-    </button>
+/** Las acciones de la grilla de Usuarios siguen siendo mock sin backend (MAGIA-35). */
+function usuarioActionToast(label: string, row: UsuarioRow) {
+  toast.info(
+    `«${label}» sobre ${row.nombre} ${row.apellido} (${row.ente}) — acción mock, sin backend.`,
+    { duration: 4000 }
   );
 }
 
@@ -253,9 +229,20 @@ const USUARIOS_FILTERS_DEFAULT: UsuariosFilters = {
   rol: "todos",
 };
 
+
 /** Grilla de Usuarios: columnas y filtros (MAGIA-30) + columna Acciones por permisos (MAGIA-35). */
-function UsuariosGrid({ permissions }: { permissions: Set<string> }) {
+function UsuariosGrid({
+  permissions,
+  extraRows = [],
+}: {
+  permissions: Set<string>;
+  /** Usuarios dados de alta en la sesión (MAGIA-47): se muestran arriba de los del mock. */
+  extraRows?: UsuarioRow[];
+}) {
   const [filters, setFilters] = useState<UsuariosFilters>(USUARIOS_FILTERS_DEFAULT);
+
+  const allRows = useMemo(() => [...extraRows, ...usuarios], [extraRows]);
+  const rolOptions = useMemo(() => [...new Set(allRows.map((u) => u.rol))], [allRows]);
 
   function setFilter(key: keyof UsuariosFilters, value: string) {
     setFilters((f) => ({ ...f, [key]: value }));
@@ -263,7 +250,7 @@ function UsuariosGrid({ permissions }: { permissions: Set<string> }) {
 
   // Filtrado básico en memoria; el demo no valida mínimos de caracteres ni llama APIs.
   const rows = useMemo(() => {
-    return usuarios.filter((u) => {
+    return allRows.filter((u) => {
       const nombreCompleto = `${u.nombre} ${u.apellido}`.toLowerCase();
       if (filters.nombre && !nombreCompleto.includes(filters.nombre.toLowerCase())) return false;
       if (filters.ci && !u.ci.includes(filters.ci)) return false;
@@ -274,13 +261,37 @@ function UsuariosGrid({ permissions }: { permissions: Set<string> }) {
       if (filters.rol !== "todos" && u.rol !== filters.rol) return false;
       return true;
     });
-  }, [filters]);
+  }, [allRows, filters]);
 
+  // Select full-size del panel de cabecera.
   function filterSelect(key: keyof UsuariosFilters, options: string[]) {
     return (
       <Select value={filters[key]} onValueChange={(v) => setFilter(key, v)}>
-        <SelectTrigger size="sm" className="w-full min-w-24 font-normal normal-case">
+        <SelectTrigger className="w-full">
           <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="todos">Todos</SelectItem>
+          {options.map((opt) => (
+            <SelectItem key={opt} value={opt}>
+              {opt}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    );
+  }
+
+  // Select "borderless" que se muestra COMO el título de la columna (estilo Fenix).
+  // value="" cuando el filtro es "todos" → el trigger muestra el nombre de la columna (placeholder).
+  function headerFilterSelect(key: keyof UsuariosFilters, options: string[], placeholder: string) {
+    return (
+      <Select
+        value={filters[key] === "todos" ? "" : filters[key]}
+        onValueChange={(v) => setFilter(key, v || "todos")}
+      >
+        <SelectTrigger size="sm" className={HEADER_SELECT_CLASS}>
+          <SelectValue placeholder={placeholder} />
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="todos">Todos</SelectItem>
@@ -296,56 +307,84 @@ function UsuariosGrid({ permissions }: { permissions: Set<string> }) {
 
   return (
     <>
+      {/* Filtros de cabecera (MAGIA-30), estilo Fenix (Central de Gestión). */}
+      <FilterPanel onClear={() => setFilters(USUARIOS_FILTERS_DEFAULT)}>
+        <FilterField label="Nombre y Apellido">
+          <Input
+            placeholder="Nombre - Apellido"
+            value={filters.nombre}
+            onChange={(e) => setFilter("nombre", e.target.value)}
+          />
+        </FilterField>
+        <FilterField label="Cédula">
+          <Input
+            placeholder="Nro. de cédula"
+            value={filters.ci}
+            onChange={(e) => setFilter("ci", e.target.value)}
+          />
+        </FilterField>
+        <FilterField label="Ente asociado">
+          <Input
+            placeholder="Ente"
+            value={filters.ente}
+            onChange={(e) => setFilter("ente", e.target.value)}
+          />
+        </FilterField>
+        <FilterField label="Acceso">{filterSelect("acceso", ACCESO_OPTIONS)}</FilterField>
+        <FilterField label="Estado">{filterSelect("estado", ESTADO_OPTIONS)}</FilterField>
+        <FilterField label="Dominio">{filterSelect("dominio", DOMINIO_OPTIONS)}</FilterField>
+        <FilterField label="Rol">{filterSelect("rol", rolOptions)}</FilterField>
+      </FilterPanel>
+
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-muted/50 text-left text-xs text-muted-foreground uppercase">
+            {/* Filtro DENTRO del header (MAGIA-30), estilo Fenix / T. Innominada:
+                el control es el propio título de la columna. Mismo estado que el panel. */}
             <tr>
-              {GRID_COLUMNS.usuarios.map((col) => (
-                <th key={col} className="px-4 py-2.5 font-medium whitespace-nowrap">
-                  {col}
+              {USUARIOS_COLUMNS.map((col) => (
+                <th key={col} className="px-4 py-2 align-middle font-medium whitespace-nowrap">
+                  {col === "Nombre" ? (
+                    <Input
+                      placeholder="Nombre - Apellido"
+                      value={filters.nombre}
+                      onChange={(e) => setFilter("nombre", e.target.value)}
+                      className={cn(HEADER_INPUT_CLASS, "min-w-36")}
+                    />
+                  ) : col === "CI" ? (
+                    <Input
+                      placeholder="Nro. de cédula"
+                      value={filters.ci}
+                      onChange={(e) => setFilter("ci", e.target.value)}
+                      className={cn(HEADER_INPUT_CLASS, "min-w-28")}
+                    />
+                  ) : col === "Ente asociado" ? (
+                    <Input
+                      placeholder="Ente"
+                      value={filters.ente}
+                      onChange={(e) => setFilter("ente", e.target.value)}
+                      className={cn(HEADER_INPUT_CLASS, "min-w-28")}
+                    />
+                  ) : col === "Acceso" ? (
+                    headerFilterSelect("acceso", ACCESO_OPTIONS, "Acceso")
+                  ) : col === "Estado" ? (
+                    headerFilterSelect("estado", ESTADO_OPTIONS, "Estado")
+                  ) : col === "Dominio" ? (
+                    headerFilterSelect("dominio", DOMINIO_OPTIONS, "Dominio")
+                  ) : col === "Rol" ? (
+                    headerFilterSelect("rol", rolOptions, "Rol")
+                  ) : (
+                    col
+                  )}
                 </th>
               ))}
-            </tr>
-            {/* Fila de filtros (MAGIA-30): Nombre/Apellido comparten un solo input. */}
-            <tr className="border-t">
-              <th colSpan={2} className="px-2 py-2 font-normal">
-                <Input
-                  placeholder="Nombre - Apellido"
-                  value={filters.nombre}
-                  onChange={(e) => setFilter("nombre", e.target.value)}
-                  className="h-7 min-w-36 text-xs"
-                />
-              </th>
-              <th className="px-2 py-2 font-normal">
-                <Input
-                  placeholder="Nro. de cédula"
-                  value={filters.ci}
-                  onChange={(e) => setFilter("ci", e.target.value)}
-                  className="h-7 min-w-28 text-xs"
-                />
-              </th>
-              <th />
-              <th />
-              <th className="px-2 py-2 font-normal">{filterSelect("acceso", ACCESO_OPTIONS)}</th>
-              <th className="px-2 py-2 font-normal">{filterSelect("estado", ESTADO_OPTIONS)}</th>
-              <th />
-              <th className="px-2 py-2 font-normal">{filterSelect("dominio", DOMINIO_OPTIONS)}</th>
-              <th className="px-2 py-2 font-normal">
-                <Input
-                  placeholder="Ente"
-                  value={filters.ente}
-                  onChange={(e) => setFilter("ente", e.target.value)}
-                  className="h-7 min-w-28 text-xs"
-                />
-              </th>
-              <th className="px-2 py-2 font-normal">{filterSelect("rol", ROL_OPTIONS)}</th>
             </tr>
           </thead>
           <tbody>
             {rows.length === 0 ? (
               <tr>
                 <td
-                  colSpan={GRID_COLUMNS.usuarios.length}
+                  colSpan={USUARIOS_COLUMNS.length}
                   className="px-4 py-10 text-center text-muted-foreground"
                 >
                   Sin resultados para los filtros aplicados.
@@ -375,15 +414,31 @@ function UsuariosGrid({ permissions }: { permissions: Set<string> }) {
                     </td>
                     <td className="px-2 py-2.5">
                       <div className="flex items-center gap-0.5">
-                        <RowActionButton icon={Eye} label="Ver detalle" row={row} />
+                        <RowIconButton
+                          icon={Eye}
+                          label="Ver detalle"
+                          onClick={() => usuarioActionToast("Ver detalle", row)}
+                        />
                         {actions.approve && (
-                          <RowActionButton icon={Check} label="Aprobar" row={row} />
+                          <RowIconButton
+                            icon={Check}
+                            label="Aprobar"
+                            onClick={() => usuarioActionToast("Aprobar", row)}
+                          />
                         )}
                         {actions.edit && (
-                          <RowActionButton icon={Pencil} label="Modificar" row={row} />
+                          <RowIconButton
+                            icon={Pencil}
+                            label="Modificar"
+                            onClick={() => usuarioActionToast("Modificar", row)}
+                          />
                         )}
                         {actions.block && (
-                          <RowActionButton icon={Lock} label="Bloquear" row={row} />
+                          <RowIconButton
+                            icon={Lock}
+                            label="Bloquear"
+                            onClick={() => usuarioActionToast("Bloquear", row)}
+                          />
                         )}
                         {/* Eliminar nunca se muestra: ningún rol tiene borrar:usuario-* (MAGIA-35). */}
                       </div>
@@ -402,42 +457,34 @@ function UsuariosGrid({ permissions }: { permissions: Set<string> }) {
       </div>
 
       {/* Paginador decorativo (MAGIA-30): una sola página en el mock. */}
-      <div className="flex items-center justify-between gap-4 border-t px-4 py-3 text-xs text-muted-foreground">
-        <span>
-          Mostrando {rows.length} de {usuarios.length} registros · {USUARIOS_PAGE_SIZE} por página
-        </span>
-        <div className="flex items-center gap-1">
-          <button
-            type="button"
-            disabled
-            className="rounded-md border p-1 disabled:opacity-40"
-            aria-label="Página anterior"
-          >
-            <ChevronLeft className="size-4" />
-          </button>
-          <span className="px-2">Página 1 de 1</span>
-          <button
-            type="button"
-            disabled
-            className="rounded-md border p-1 disabled:opacity-40"
-            aria-label="Página siguiente"
-          >
-            <ChevronRight className="size-4" />
-          </button>
-        </div>
-      </div>
+      <GridPager shown={rows.length} total={allRows.length} />
     </>
   );
 }
 
-export function AbmDemo() {
+export function AbmDemo({ initialAltaUsuario = false }: { initialAltaUsuario?: boolean }) {
   const flow = useDemoFlow();
-  const navigate = useNavigate();
   // Si hay sesión mock iniciada en el login, el ABM arranca con ese rol.
   const [role, setRole] = useState<string>(
     () => getMockSession()?.user.role ?? "admin-banco"
   );
   const [activeTab, setActiveTab] = useState<AbmTab>("usuarios");
+
+  // Fuera del recorrido la pantalla pregunta primero con qué rol verla;
+  // dentro del recorrido el rol ya viene del paso de login.
+  const [rolePickerOpen, setRolePickerOpen] = useState(() => flow === null);
+  const [altaUsuarioOpen, setAltaUsuarioOpen] = useState(false);
+  const [nuevosUsuarios, setNuevosUsuarios] = useState<UsuarioRow[]>([]);
+
+  // Filas de entes elevadas de EntesGrid (MAGIA-38/39): el alta desde "+" inserta acá
+  // y la relación Proveedor→EGP puede actualizar ambas pestañas.
+  const [egpRowsState, setEgpRowsState] = useState<EnteRow[]>(() => [...egpRows]);
+  const [provRowsState, setProvRowsState] = useState<EnteRow[]>(() => [...proveedorRows]);
+  const [altaEnte, setAltaEnte] = useState<EnteTipo | null>(null);
+
+  // Registros existentes para simular validaciones back-end del alta (MAGIA-47).
+  const existingMails = useRef(new Set([ALTA_USUARIO_SEEDS.existingMail]));
+  const existingCIs = useRef(new Set([ALTA_USUARIO_SEEDS.existingCI]));
 
   const sessionActive = getMockSession() !== null;
   const domain = mockResponses[role]?.user.domain ?? "banco";
@@ -446,6 +493,73 @@ export function AbmDemo() {
     setRole(newRole);
     // Mantiene la sesión mock alineada con el rol elegido (sidebar incluido).
     if (getMockSession()) setMockSession(newRole);
+  }
+
+  // Roles que pueden ver esta pantalla en particular (para el selector inicial).
+  const eligibleRoles = useMemo(() => {
+    return Object.entries(mockResponses)
+      .filter(([, entry]) => {
+        const perms = new Set(entry.user.permissions);
+        return initialAltaUsuario
+          ? CARGAR_USUARIO_PERMISOS.some((p) => perms.has(p))
+          : hasAbmAccess(perms);
+      })
+      .map(([r]) => r);
+  }, [initialAltaUsuario]);
+
+  /** Alta de usuario guardada: entra a la grilla como Pendiente de Autorización. */
+  function handleAltaUsuarioSave(u: Usuario) {
+    existingMails.current.add(u.mail.toLowerCase());
+    existingCIs.current.add(u.ci);
+    setNuevosUsuarios((prev) => [
+      {
+        nombre: u.nombre,
+        apellido: u.apellido,
+        ci: u.ci,
+        mail: u.mail,
+        telefono: u.tel,
+        acceso: "Activo",
+        estado: "Pendiente de Autorización",
+        dominio: u.dominio.toLowerCase() as UsuarioDominio,
+        ente: u.ente,
+        rol: u.rol.toLowerCase(),
+      },
+      ...prev,
+    ]);
+    setAltaUsuarioOpen(false);
+    toast.success("Registro exitoso", {
+      description: `${u.nombre} ${u.apellido} fue registrado exitosamente.`,
+    });
+    // En el recorrido, guardar el alta completa el último paso.
+    if (flow) flow.advance();
+  }
+
+  /**
+   * Alta de EGP (MAGIA-38) / Proveedor (MAGIA-39) guardada: entra a la grilla como
+   * Pendiente de Autorización. En Proveedor además se actualiza el EGP padre
+   * (relación padre-hijo). APIs de datos financieros y notificación: fuera de alcance.
+   */
+  function handleAltaEnteSave(tipo: EnteTipo, row: EnteRow) {
+    if (tipo === "egp") {
+      setEgpRowsState((prev) => [row, ...prev]);
+    } else {
+      setProvRowsState((prev) => [row, ...prev]);
+      setEgpRowsState((prev) =>
+        prev.map((e) =>
+          e.razonSocial === row.egpPadre
+            ? { ...e, proveedoresAsociados: (e.proveedoresAsociados ?? 0) + 1 }
+            : e
+        )
+      );
+    }
+    logAuditoria("alta", `${tipo === "egp" ? "EGP" : "Proveedor"} ${row.razonSocial} (${row.ruc})`);
+    setAltaEnte(null);
+    toast.success(`El ${row.razonSocial} fue registrado exitosamente`, {
+      description:
+        tipo === "egp"
+          ? "Quedó Pendiente de Autorización en la grilla de EGP."
+          : `Quedó Pendiente de Autorización, asociado al EGP ${row.egpPadre}.`,
+    });
   }
 
   const permissions = useMemo(
@@ -468,19 +582,14 @@ export function AbmDemo() {
     return getAltaOptions(activeTab).filter((opt) => hasPermission(permissions, opt.permission));
   }, [activeTab, permissions]);
 
-  const columns = GRID_COLUMNS[activeTab];
-
   function handleAltaOption(option: AltaOption) {
     if (option.id === "usuario") {
-      if (flow) flow.advance();
-      else navigate("/demos/alta-usuario");
+      // Seamless: el alta abre su modal sobre esta misma pantalla (MAGIA-47).
+      setAltaUsuarioOpen(true);
       return;
     }
-
-    toast.info(
-      `Alta de “${option.label}” — el modal se implementará en una historia posterior.`,
-      { duration: 4000 }
-    );
+    // Alta de EGP (MAGIA-38) / Proveedor (MAGIA-39): modal sobre esta misma pantalla.
+    setAltaEnte(option.id as EnteTipo);
   }
 
   return (
@@ -495,7 +604,7 @@ export function AbmDemo() {
             </p>
           </div>
           <span className="shrink-0 rounded-full border px-3 py-1 text-xs font-medium text-muted-foreground">
-            MAGIA-25/30/35 · Mock
+            Épica MAGIA-5 · Mock
           </span>
         </div>
 
@@ -589,34 +698,20 @@ export function AbmDemo() {
               )}
             </div>
 
-            {activeTab === "usuarios" ? (
-              <UsuariosGrid permissions={permissions} />
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead className="bg-muted/50 text-left text-xs text-muted-foreground uppercase">
-                    <tr>
-                      {columns.map((col) => (
-                        <th key={col} className="px-4 py-2.5 font-medium">
-                          {col}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td
-                        colSpan={columns.length}
-                        className="px-4 py-12 text-center text-muted-foreground"
-                      >
-                        Grilla de {TAB_CONFIG.find((t) => t.id === activeTab)?.label} — contenido
-                        pendiente de historias futuras.
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
+            {activeTab === "usuarios" && (
+              <UsuariosGrid permissions={permissions} extraRows={nuevosUsuarios} />
             )}
+            {(activeTab === "egp" || activeTab === "proveedor") && (
+              // key: resetea filtros al cambiar de pestaña o de rol (las filas viven acá arriba)
+              <EntesGrid
+                key={activeTab}
+                tipo={activeTab}
+                permissions={permissions}
+                rows={activeTab === "egp" ? egpRowsState : provRowsState}
+                onRowsChange={activeTab === "egp" ? setEgpRowsState : setProvRowsState}
+              />
+            )}
+            {activeTab === "notificaciones" && <NotificacionesGrid permissions={permissions} />}
           </div>
         )}
 
@@ -633,6 +728,48 @@ export function AbmDemo() {
           )}
         </p>
       </div>
+
+      {/* Fuera del recorrido: elegir con qué rol ver esta pantalla (solo roles con acceso). */}
+      <RolePickerDialog
+        open={rolePickerOpen}
+        onOpenChange={setRolePickerOpen}
+        roles={eligibleRoles}
+        currentRole={role}
+        description={
+          initialAltaUsuario
+            ? "Elegí el rol para probar el alta de usuario. El modal se abre sobre la pantalla de Gestión ABM."
+            : "Elegí el rol con el que se carga la pantalla de Gestión ABM."
+        }
+        onPick={(r) => {
+          handleRoleChange(r);
+          if (initialAltaUsuario) setAltaUsuarioOpen(true);
+        }}
+      />
+
+      {/* Alta de EGP / Proveedor (MAGIA-38/39): modal sobre esta misma pantalla. */}
+      {altaEnte && (
+        <AltaEnteDialog
+          tipo={altaEnte}
+          existingRows={altaEnte === "egp" ? egpRowsState : provRowsState}
+          // EGP Padre: solo entes vigentes no bloqueados (se excluyen Bloqueado y Rechazado).
+          egpOptions={egpRowsState
+            .filter((e) => e.estado !== "Bloqueado" && e.estado !== "Rechazado")
+            .map((e) => e.razonSocial)}
+          onClose={() => setAltaEnte(null)}
+          onSave={(row) => handleAltaEnteSave(altaEnte, row)}
+        />
+      )}
+
+      {/* Alta de usuario (MAGIA-47): modal sobre esta misma pantalla. */}
+      {altaUsuarioOpen && (
+        <AltaUsuarioDialog
+          sessionDomain={DOMINIO_DIALOG[domain] ?? "Banco"}
+          existingMails={existingMails.current}
+          existingCIs={existingCIs.current}
+          onClose={() => setAltaUsuarioOpen(false)}
+          onSave={handleAltaUsuarioSave}
+        />
+      )}
     </PlatformShellDemo>
   );
 }
