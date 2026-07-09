@@ -19,7 +19,23 @@ export interface MockLoginEntry {
 /** Respuesta simulada del BFF por rol (fixture del front real). */
 export const mockResponses = mockLoginResponses as Record<string, MockLoginEntry>;
 
+/**
+ * Entes de esta demo: al entrar con un rol de dominio egp/proveedor se elige
+ * cuál de estos entes "sos"; el dominio banco no tiene ente asociado.
+ */
+export const DOMAIN_ENTES: Record<string, string[]> = {
+  egp: ["Biggie", "Ferrex"],
+  proveedor: ["Massei", "Lincoln", "Nestlé"],
+};
+
+/** Entes elegibles para un rol según su dominio ([] para banco). */
+export function entesForRole(role: string): string[] {
+  const domain = mockResponses[role]?.user.domain ?? "";
+  return DOMAIN_ENTES[domain] ?? [];
+}
+
 const STORAGE_KEY = "atlas-demo-mock-session";
+const ENTE_STORAGE_KEY = "atlas-demo-mock-session-ente";
 
 /** Devuelve la sesión mock activa, o `null` si no hay ninguna. */
 export function getMockSession(): MockLoginEntry | null {
@@ -31,14 +47,29 @@ export function getMockSession(): MockLoginEntry | null {
   }
 }
 
-/** Inicia una sesión mock con el rol indicado (clave del fixture). */
-export function setMockSession(role: string) {
+/** Ente elegido al iniciar la sesión mock (solo dominios egp/proveedor). */
+export function getMockEnte(): string | null {
+  try {
+    return localStorage.getItem(ENTE_STORAGE_KEY);
+  } catch {
+    return null;
+  }
+}
+
+/** Inicia una sesión mock con el rol indicado (clave del fixture) y su ente. */
+export function setMockSession(role: string, ente?: string | null) {
   localStorage.setItem(STORAGE_KEY, role);
+  if (ente) {
+    localStorage.setItem(ENTE_STORAGE_KEY, ente);
+  } else {
+    localStorage.removeItem(ENTE_STORAGE_KEY);
+  }
 }
 
 /** Cierra la sesión mock. */
 export function clearMockSession() {
   localStorage.removeItem(STORAGE_KEY);
+  localStorage.removeItem(ENTE_STORAGE_KEY);
 }
 
 /**

@@ -93,7 +93,9 @@
       "username": "aprobador-egp",
       "role": "aprobador-egp",
       "domain": "egp",
-      "permissions": []
+      "permissions": [
+        "visualizar:ente-proveedor"
+      ]
     }
   },
   "admin-egp": {

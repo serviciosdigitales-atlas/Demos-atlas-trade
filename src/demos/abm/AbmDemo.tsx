@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Check, ChevronDown, Eye, Lock, Pencil, Plus } from "lucide-react";
 import { toast } from "sonner";
 
@@ -24,35 +24,40 @@ import {
 } from "@/components/ui/select";
 import { PlatformShellDemo } from "@/demos/shared/PlatformShellDemo";
 import {
+  entesForRole,
+  getMockEnte,
   getMockSession,
   mockResponses,
   setMockSession,
 } from "@/demos/login/mock-session";
 import {
-  ALTA_USUARIO_SEEDS,
   AltaUsuarioDialog,
   type Dominio,
   type Usuario,
 } from "@/demos/alta-usuario/AltaUsuarioDialog";
 import { RolePickerDialog, roleLabel } from "@/demos/shared/RolePickerDialog";
 import { cn } from "@/lib/utils";
-import usuariosData from "../../../mock-data/abm/usuarios.json";
 import selectorData from "../../../mock-data/login/mock-selector-dominio-roles.json";
 import {
   canAccessEntity,
-  egpRows,
   FilterField,
   FilterPanel,
   GridPager,
   HEADER_INPUT_CLASS,
   HEADER_SELECT_CLASS,
   logAuditoria,
-  proveedorRows,
   RowIconButton,
   StatusPill,
   type EnteRow,
   type EnteTipo,
 } from "./abm-shared";
+import {
+  sessionCIs,
+  sessionMails,
+  useAbmSession,
+  type UsuarioDominio,
+  type UsuarioRow,
+} from "./abm-session-store";
 import { AltaEnteDialog } from "./AltaEnteDialog";
 import { EntesGrid } from "./EntesGrid";
 import { NotificacionesGrid } from "./NotificacionesGrid";
@@ -60,24 +65,6 @@ import { NotificacionesGrid } from "./NotificacionesGrid";
 const domainRoles = selectorData as Record<string, string[]>;
 
 type AbmTab = "egp" | "proveedor" | "usuarios" | "notificaciones";
-
-type UsuarioDominio = "banco" | "egp" | "proveedor";
-
-/** Fila de la grilla de Usuarios (MAGIA-30). Un usuario con varios entes aparece una vez por ente. */
-type UsuarioRow = {
-  nombre: string;
-  apellido: string;
-  ci: string;
-  mail: string;
-  telefono: string;
-  acceso: string;
-  estado: string;
-  dominio: UsuarioDominio;
-  ente: string;
-  rol: string;
-};
-
-const usuarios = usuariosData as UsuarioRow[];
 
 /** Dominio de la sesión mock → dominio del modal de alta de usuario. */
 const DOMINIO_DIALOG: Record<string, Dominio> = {
@@ -137,6 +124,7 @@ const USUARIOS_COLUMNS = [
   "Dominio",
   "Ente asociado",
   "Rol",
+  "Cargado por",
 ];
 
 const ACCESO_OPTIONS = ["Activo", "Bloqueado"];
@@ -162,6 +150,26 @@ export function userActionsForRow(permissions: Set<string>, rowDomain: UsuarioDo
     block: permissions.has(`bloquear:${resource}`),
     delete: permissions.has(`borrar:${resource}`),
   };
+}
+
+/**
+ * Control fino simulado (matriz filas 20/26): además del permiso
+ * visualizar:<recurso>, el dominio "padre" (banco sobre usuarios EGP, EGP
+ * sobre usuarios Proveedor) solo ve los usuarios cargados por su propio dominio.
+ */
+export function canViewUsuarioRow(
+  permissions: Set<string>,
+  viewerDomain: UsuarioDominio,
+  row: UsuarioRow
+): boolean {
+  if (!permissions.has(`visualizar:usuario-${row.dominio}`)) return false;
+  if (viewerDomain === "banco" && row.dominio === "egp") {
+    return row.cargadoPor.dominio === "banco";
+  }
+  if (viewerDomain === "egp" && row.dominio === "proveedor") {
+    return row.cargadoPor.dominio === "egp";
+  }
+  return true;
 }
 
 type AltaOption = {
@@ -233,15 +241,23 @@ const USUARIOS_FILTERS_DEFAULT: UsuariosFilters = {
 /** Grilla de Usuarios: columnas y filtros (MAGIA-30) + columna Acciones por permisos (MAGIA-35). */
 function UsuariosGrid({
   permissions,
-  extraRows = [],
+  viewerDomain,
+  rows: sessionRows,
+  onAprobar,
 }: {
   permissions: Set<string>;
-  /** Usuarios dados de alta en la sesión (MAGIA-47): se muestran arriba de los del mock. */
-  extraRows?: UsuarioRow[];
+  /** Dominio del rol logueado: define qué usuarios de otros dominios se ven (filas 20/26). */
+  viewerDomain: UsuarioDominio;
+  /** Todos los usuarios de la sesión de recorrido (semilla + altas en memoria). */
+  rows: UsuarioRow[];
+  onAprobar: (row: UsuarioRow) => void;
 }) {
   const [filters, setFilters] = useState<UsuariosFilters>(USUARIOS_FILTERS_DEFAULT);
 
-  const allRows = useMemo(() => [...extraRows, ...usuarios], [extraRows]);
+  const allRows = useMemo(
+    () => sessionRows.filter((u) => canViewUsuarioRow(permissions, viewerDomain, u)),
+    [sessionRows, permissions, viewerDomain]
+  );
   const rolOptions = useMemo(() => [...new Set(allRows.map((u) => u.rol))], [allRows]);
 
   function setFilter(key: keyof UsuariosFilters, value: string) {
@@ -307,6 +323,14 @@ function UsuariosGrid({
 
   return (
     <>
+      {/* Nota para quien presenta la demo: estas reglas simulan el control fino del back-end. */}
+      <p className="border-b bg-muted/30 px-4 py-2 text-xs text-muted-foreground">
+        <span className="font-medium text-foreground">Controles finos simulados (sin backend):</span>{" "}
+        el Banco solo ve y aprueba usuarios EGP cargados por otro usuario del Banco; ídem EGP con
+        usuarios Proveedor. El primer Admin-EGP / Admin-Proveedor de un ente se carga desde el
+        dominio padre solo si no existe otro activo.
+      </p>
+
       {/* Filtros de cabecera (MAGIA-30), estilo Fenix (Central de Gestión). */}
       <FilterPanel onClear={() => setFilters(USUARIOS_FILTERS_DEFAULT)}>
         <FilterField label="Nombre y Apellido">
@@ -419,11 +443,13 @@ function UsuariosGrid({
                           label="Ver detalle"
                           onClick={() => usuarioActionToast("Ver detalle", row)}
                         />
-                        {actions.approve && (
+                        {/* Aprobar solo aplica a altas pendientes; el control fino
+                            (filas 19/25) se valida en handleAprobarUsuario. */}
+                        {actions.approve && row.estado === "Pendiente de Autorización" && (
                           <RowIconButton
                             icon={Check}
                             label="Aprobar"
-                            onClick={() => usuarioActionToast("Aprobar", row)}
+                            onClick={() => onAprobar(row)}
                           />
                         )}
                         {actions.edit && (
@@ -448,6 +474,11 @@ function UsuariosGrid({
                     <td className="px-4 py-2.5">
                       <code className="rounded bg-muted px-1.5 py-0.5 text-xs">{row.rol}</code>
                     </td>
+                    <td className="px-4 py-2.5 whitespace-nowrap">
+                      <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
+                        {row.cargadoPor.usuario}
+                      </code>
+                    </td>
                   </tr>
                 );
               })
@@ -468,31 +499,57 @@ export function AbmDemo({ initialAltaUsuario = false }: { initialAltaUsuario?: b
   const [role, setRole] = useState<string>(
     () => getMockSession()?.user.role ?? "admin-banco"
   );
+  // Ente del usuario logueado (solo dominios egp/proveedor): viene del login
+  // o del role picker; si falta, se asume el primer ente del dominio.
+  const [ente, setEnte] = useState<string | null>(() => {
+    const initialRole = getMockSession()?.user.role ?? "admin-banco";
+    const options = entesForRole(initialRole);
+    if (options.length === 0) return null;
+    const stored = getMockEnte();
+    return stored && options.includes(stored) ? stored : (options[0] ?? null);
+  });
   const [activeTab, setActiveTab] = useState<AbmTab>("usuarios");
 
   // Fuera del recorrido la pantalla pregunta primero con qué rol verla;
   // dentro del recorrido el rol ya viene del paso de login.
   const [rolePickerOpen, setRolePickerOpen] = useState(() => flow === null);
   const [altaUsuarioOpen, setAltaUsuarioOpen] = useState(false);
-  const [nuevosUsuarios, setNuevosUsuarios] = useState<UsuarioRow[]>([]);
 
-  // Filas de entes elevadas de EntesGrid (MAGIA-38/39): el alta desde "+" inserta acá
-  // y la relación Proveedor→EGP puede actualizar ambas pestañas.
-  const [egpRowsState, setEgpRowsState] = useState<EnteRow[]>(() => [...egpRows]);
-  const [provRowsState, setProvRowsState] = useState<EnteRow[]>(() => [...proveedorRows]);
+  // Estado de la "sesión de recorrido" (MAGIA-224): usuarios y entes viven en un
+  // store en memoria, así las altas sobreviven a la navegación entre pantallas
+  // y un refresh (F5) vuelve todo a la semilla de los JSON.
+  const [usuariosRows, setUsuariosRows] = useAbmSession("usuarios");
+  const [egpRowsState, setEgpRowsState] = useAbmSession("egpRows");
+  const [provRowsState, setProvRowsState] = useAbmSession("provRows");
   const [altaEnte, setAltaEnte] = useState<EnteTipo | null>(null);
-
-  // Registros existentes para simular validaciones back-end del alta (MAGIA-47).
-  const existingMails = useRef(new Set([ALTA_USUARIO_SEEDS.existingMail]));
-  const existingCIs = useRef(new Set([ALTA_USUARIO_SEEDS.existingCI]));
 
   const sessionActive = getMockSession() !== null;
   const domain = mockResponses[role]?.user.domain ?? "banco";
+  // Entes elegibles como "quién sos": salen del store (semilla + altas de la
+  // sesión), así un EGP/Proveedor recién creado también se puede elegir acá.
+  const enteOptions = useMemo(() => {
+    const rows = domain === "egp" ? egpRowsState : domain === "proveedor" ? provRowsState : [];
+    return rows.filter((e) => e.estado !== "Rechazado").map((e) => e.razonSocial);
+  }, [domain, egpRowsState, provRowsState]);
 
-  function handleRoleChange(newRole: string) {
+  function handleRoleChange(newRole: string, newEnte?: string | null) {
+    const options = entesForRole(newRole);
+    // Si el nuevo dominio necesita ente y no vino uno elegido, se asume el primero.
+    const nextEnte =
+      options.length === 0
+        ? null
+        : newEnte && options.includes(newEnte)
+          ? newEnte
+          : (options[0] ?? null);
     setRole(newRole);
-    // Mantiene la sesión mock alineada con el rol elegido (sidebar incluido).
-    if (getMockSession()) setMockSession(newRole);
+    setEnte(nextEnte);
+    // Mantiene la sesión mock alineada con el rol/ente elegido (sidebar incluido).
+    if (getMockSession()) setMockSession(newRole, nextEnte);
+  }
+
+  function handleEnteChange(newEnte: string) {
+    setEnte(newEnte);
+    if (getMockSession()) setMockSession(role, newEnte);
   }
 
   // Roles que pueden ver esta pantalla en particular (para el selector inicial).
@@ -509,9 +566,9 @@ export function AbmDemo({ initialAltaUsuario = false }: { initialAltaUsuario?: b
 
   /** Alta de usuario guardada: entra a la grilla como Pendiente de Autorización. */
   function handleAltaUsuarioSave(u: Usuario) {
-    existingMails.current.add(u.mail.toLowerCase());
-    existingCIs.current.add(u.ci);
-    setNuevosUsuarios((prev) => [
+    sessionMails.add(u.mail.toLowerCase());
+    sessionCIs.add(u.ci);
+    setUsuariosRows((prev) => [
       {
         nombre: u.nombre,
         apellido: u.apellido,
@@ -523,6 +580,8 @@ export function AbmDemo({ initialAltaUsuario = false }: { initialAltaUsuario?: b
         dominio: u.dominio.toLowerCase() as UsuarioDominio,
         ente: u.ente,
         rol: u.rol.toLowerCase(),
+        // Base de los controles finos (filas 19/20/25/26): quién cargó el alta.
+        cargadoPor: { usuario: role, dominio: domain as UsuarioDominio },
       },
       ...prev,
     ]);
@@ -530,8 +589,58 @@ export function AbmDemo({ initialAltaUsuario = false }: { initialAltaUsuario?: b
     toast.success("Registro exitoso", {
       description: `${u.nombre} ${u.apellido} fue registrado exitosamente.`,
     });
-    // En el recorrido, guardar el alta completa el último paso.
-    if (flow) flow.advance();
+    // El ABM es el último paso del recorrido y funciona como espacio de trabajo
+    // (crear ente → cargar su admin → aprobar), así que guardar un alta NO
+    // termina el recorrido; se finaliza explícitamente desde la barra del tour.
+  }
+
+  /**
+   * Aprobación de alta de usuario (filas 19/25): simula el control fino del
+   * back-end. El dominio "padre" (banco→egp, egp→proveedor) solo aprueba
+   * usuarios cargados por OTRO usuario de su propio dominio.
+   */
+  function handleAprobarUsuario(target: UsuarioRow) {
+    const parentApproval =
+      (domain === "banco" && target.dominio === "egp") ||
+      (domain === "egp" && target.dominio === "proveedor");
+    if (parentApproval && target.cargadoPor.dominio !== domain) {
+      toast.error("Aprobación rechazada (control fino simulado)", {
+        description: `Como rol del dominio ${domain} solo podés aprobar usuarios cargados por tu propio dominio; este alta la cargó ${target.cargadoPor.usuario}.`,
+      });
+      return;
+    }
+    if (parentApproval && target.cargadoPor.usuario === role) {
+      toast.error("Aprobación rechazada (control fino simulado)", {
+        description:
+          "El alta debe aprobarla otro usuario del dominio: no puede aprobarla quien la cargó.",
+      });
+      return;
+    }
+    setUsuariosRows((prev) =>
+      prev.map((u) =>
+        u.ci === target.ci && u.dominio === target.dominio && u.ente === target.ente
+          ? { ...u, estado: "Autorizado" }
+          : u
+      )
+    );
+    logAuditoria(
+      "aprobar-alta",
+      `usuario ${target.nombre} ${target.apellido} (${target.ente}) por ${role}`
+    );
+    toast.success(`${target.nombre} ${target.apellido} fue autorizado`, {
+      description: `El alta cargada por ${target.cargadoPor.usuario} quedó aprobada.`,
+    });
+  }
+
+  /**
+   * Control fino simulado (filas 18/24): el alta inter-dominio de un Admin-EGP /
+   * Admin-Proveedor solo procede si el ente aún no tiene un Admin activo.
+   */
+  function hasActiveAdmin(dominio: "EGP" | "Proveedor", enteNombre: string): boolean {
+    const rolAdmin = dominio === "EGP" ? "admin-egp" : "admin-proveedor";
+    return usuariosRows.some(
+      (u) => u.rol === rolAdmin && u.ente === enteNombre && u.acceso === "Activo"
+    );
   }
 
   /**
@@ -557,7 +666,7 @@ export function AbmDemo({ initialAltaUsuario = false }: { initialAltaUsuario?: b
     toast.success(`El ${row.razonSocial} fue registrado exitosamente`, {
       description:
         tipo === "egp"
-          ? "Quedó Pendiente de Autorización en la grilla de EGP."
+          ? "Quedó Activo en la grilla de EGP (alta directa, sin aprobación)."
           : `Quedó Pendiente de Autorización, asociado al EGP ${row.egpPadre}.`,
     });
   }
@@ -571,6 +680,27 @@ export function AbmDemo({ initialAltaUsuario = false }: { initialAltaUsuario?: b
     () => TAB_CONFIG.filter((tab) => tab.canView(permissions)),
     [permissions]
   );
+
+  // Dominios que este rol puede dar de alta según sus permisos cargar:usuario-*
+  // (matriz filas 18/24: p. ej. operador-banco→EGP, operador-egp→Proveedor).
+  const altaDomains = useMemo<Dominio[]>(() => {
+    const domains: Dominio[] = [];
+    if (permissions.has("cargar:usuario-banco")) domains.push("Banco");
+    if (permissions.has("cargar:usuario-egp")) domains.push("EGP");
+    if (permissions.has("cargar:usuario-proveedor")) domains.push("Proveedor");
+    return domains;
+  }, [permissions]);
+
+  // Entes reales para el combo de alta de usuario: salen del store (semilla +
+  // altas de la sesión), así un EGP/Proveedor recién creado aparece de una.
+  // Se excluyen los rechazados; los bloqueados se marcan como tales.
+  const entesByDomain = useMemo(() => {
+    const toOpcion = (rows: EnteRow[]) =>
+      rows
+        .filter((e) => e.estado !== "Rechazado")
+        .map((e) => ({ nombre: e.razonSocial, bloqueado: e.estado === "Bloqueado" }));
+    return { EGP: toOpcion(egpRowsState), Proveedor: toOpcion(provRowsState) };
+  }, [egpRowsState, provRowsState]);
 
   useEffect(() => {
     if (!visibleTabs.some((tab) => tab.id === activeTab)) {
@@ -616,8 +746,8 @@ export function AbmDemo({ initialAltaUsuario = false }: { initialAltaUsuario?: b
             <div>
               <p className="text-sm font-medium">
                 {sessionActive
-                  ? `Sesión mock activa (dominio ${domain})`
-                  : `Sesión simulada (dominio ${domain})`}
+                  ? `Sesión mock activa (dominio ${domain}${ente ? ` · ${ente}` : ""})`
+                  : `Sesión simulada (dominio ${domain}${ente ? ` · ${ente}` : ""})`}
               </p>
               <p className="mt-0.5 max-w-xl text-xs text-muted-foreground">
                 {sessionActive
@@ -626,27 +756,49 @@ export function AbmDemo({ initialAltaUsuario = false }: { initialAltaUsuario?: b
               </p>
             </div>
           </div>
-          <div className="flex flex-col gap-1.5 sm:min-w-56">
-            <Label className="text-xs text-muted-foreground">Rol del usuario logueado</Label>
-            <Select value={role} onValueChange={handleRoleChange}>
-              <SelectTrigger className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {Object.entries(domainRoles).map(([dom, roles]) => (
-                  <SelectGroup key={dom}>
-                    <SelectLabel className="text-[10px] uppercase tracking-wide">
-                      {dom}
-                    </SelectLabel>
-                    {roles.map((r) => (
-                      <SelectItem key={r} value={r}>
-                        {roleLabel(r)}
+          <div className="flex flex-col gap-3 sm:min-w-56">
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-xs text-muted-foreground">Rol del usuario logueado</Label>
+              <Select value={role} onValueChange={(r) => handleRoleChange(r)}>
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(domainRoles).map(([dom, roles]) => (
+                    <SelectGroup key={dom}>
+                      <SelectLabel className="text-[10px] uppercase tracking-wide">
+                        {dom}
+                      </SelectLabel>
+                      {roles.map((r) => (
+                        <SelectItem key={r} value={r}>
+                          {roleLabel(r)}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            {/* Dominios egp/proveedor: qué ente "sos" (define el ente asociado del alta). */}
+            {enteOptions.length > 0 && (
+              <div className="flex flex-col gap-1.5">
+                <Label className="text-xs text-muted-foreground">
+                  {domain === "egp" ? "EGP del usuario logueado" : "Proveedor del usuario logueado"}
+                </Label>
+                <Select value={ente ?? ""} onValueChange={handleEnteChange}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {enteOptions.map((e) => (
+                      <SelectItem key={e} value={e}>
+                        {e}
                       </SelectItem>
                     ))}
-                  </SelectGroup>
-                ))}
-              </SelectContent>
-            </Select>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
         </div>
 
@@ -699,7 +851,12 @@ export function AbmDemo({ initialAltaUsuario = false }: { initialAltaUsuario?: b
             </div>
 
             {activeTab === "usuarios" && (
-              <UsuariosGrid permissions={permissions} extraRows={nuevosUsuarios} />
+              <UsuariosGrid
+                permissions={permissions}
+                viewerDomain={domain as UsuarioDominio}
+                rows={usuariosRows}
+                onAprobar={handleAprobarUsuario}
+              />
             )}
             {(activeTab === "egp" || activeTab === "proveedor") && (
               // key: resetea filtros al cambiar de pestaña o de rol (las filas viven acá arriba)
@@ -740,8 +897,8 @@ export function AbmDemo({ initialAltaUsuario = false }: { initialAltaUsuario?: b
             ? "Elegí el rol para probar el alta de usuario. El modal se abre sobre la pantalla de Gestión ABM."
             : "Elegí el rol con el que se carga la pantalla de Gestión ABM."
         }
-        onPick={(r) => {
-          handleRoleChange(r);
+        onPick={(r, pickedEnte) => {
+          handleRoleChange(r, pickedEnte);
           if (initialAltaUsuario) setAltaUsuarioOpen(true);
         }}
       />
@@ -764,8 +921,12 @@ export function AbmDemo({ initialAltaUsuario = false }: { initialAltaUsuario?: b
       {altaUsuarioOpen && (
         <AltaUsuarioDialog
           sessionDomain={DOMINIO_DIALOG[domain] ?? "Banco"}
-          existingMails={existingMails.current}
-          existingCIs={existingCIs.current}
+          sessionEnte={ente}
+          allowedDomains={altaDomains}
+          entesByDomain={entesByDomain}
+          existingMails={sessionMails}
+          existingCIs={sessionCIs}
+          hasActiveAdmin={hasActiveAdmin}
           onClose={() => setAltaUsuarioOpen(false)}
           onSave={handleAltaUsuarioSave}
         />

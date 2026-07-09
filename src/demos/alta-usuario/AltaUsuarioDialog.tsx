@@ -33,33 +33,32 @@ const AD_USERS: AdUser[] = [
   { user: "acaballero", nombre: "Ana", apellido: "Caballero", ci: "4567890", mail: "ana.caballero@banco.com", tel: "0984444444" },
 ];
 
-const ENTES: Record<"EGP" | "Proveedor", { nombre: string; bloqueado: boolean }[]> = {
-  EGP: [
-    { nombre: "EGP Central", bloqueado: false },
-    { nombre: "EGP Norte", bloqueado: false },
-    { nombre: "EGP Sur", bloqueado: false },
-  ],
-  Proveedor: [
-    { nombre: "Biggie", bloqueado: false },
-    { nombre: "Ferrex", bloqueado: true },
-    { nombre: "Stock", bloqueado: false },
-    { nombre: "Nicolás", bloqueado: false },
-  ],
-};
+// Ente para el combo de alta: nombre + si está bloqueado. La lista real llega
+// por props desde el store en memoria del ABM (semilla + altas de la sesión),
+// así un EGP/Proveedor recién creado aparece acá sin recargar.
+export type EnteOpcion = { nombre: string; bloqueado: boolean };
 
+// Alineado con los roles reales del login (mock-selector-dominio-roles.json).
 const ROLES: Record<Dominio, string[]> = {
-  Banco: ["Admin-Banco", "Operador-Banco", "Consulta-Banco"],
-  EGP: ["Admin-EGP", "Operador-EGP", "Consulta-EGP"],
-  Proveedor: ["Admin-Proveedor", "Operador-Proveedor"],
+  Banco: ["Admin-Banco", "Operador-Banco", "Supervisor-Banco"],
+  EGP: ["Admin-EGP", "Operador-EGP", "Supervisor-EGP", "Aprobador-EGP"],
+  Proveedor: ["Admin-Proveedor", "Operador-Proveedor", "Supervisor-Proveedor"],
 };
 
-// Dominios habilitados para dar de alta según el dominio del usuario logueado.
-// Incluye carga mismo-dominio + inter-dominio (Banco→EGP, EGP→Proveedor).
-const DOMAIN_PERMISSIONS: Record<Dominio, Dominio[]> = {
-  Banco: ["Banco", "EGP"],
-  EGP: ["EGP", "Proveedor"],
-  Proveedor: ["Proveedor"],
+// Dominio "hijo" de cada dominio: base de la excepción de carga inter-dominio.
+// El Banco solo carga el primer Admin-EGP de un ente; el EGP solo el primer
+// Admin-Proveedor. No pueden cargar ningún otro rol (matriz filas 18/24).
+const CHILD_DOMAIN: Record<Dominio, "EGP" | "Proveedor" | null> = {
+  Banco: "EGP",
+  EGP: "Proveedor",
+  Proveedor: null,
 };
+
+/** Rol forzado cuando la carga es inter-dominio (Admin del ente hijo), o null. */
+function forcedAdminRole(sessionDomain: Dominio, dominio: "" | Dominio): string | null {
+  if (!dominio) return null;
+  return CHILD_DOMAIN[sessionDomain] === dominio ? `Admin-${dominio}` : null;
+}
 
 export interface Usuario {
   nombre: string;
@@ -100,31 +99,76 @@ const EMPTY_FORM: FormValues = {
 export const ALTA_USUARIO_SEEDS = {
   existingMail: "existente@atlas.com.py",
   existingCI: "5555555",
-  enteBloqueado: "Ferrex",
 };
 
 // ---------- Modal de alta (MAGIA-47) ----------
 export function AltaUsuarioDialog({
   sessionDomain,
+  sessionEnte,
+  allowedDomains,
+  entesByDomain,
   existingMails,
   existingCIs,
+  hasActiveAdmin,
   onClose,
   onSave,
 }: {
   sessionDomain: Dominio;
+  /** Ente del usuario logueado (elegido al entrar como EGP/Proveedor); null para Banco. */
+  sessionEnte: string | null;
+  /**
+   * Dominios que el rol logueado puede dar de alta, derivados de sus permisos
+   * cargar:usuario-* (matriz filas 18/24: Banco→EGP y EGP→Proveedor inter-dominio).
+   */
+  allowedDomains: Dominio[];
+  /** Entes reales del store del ABM (semilla + altas de la sesión), por dominio. */
+  entesByDomain: Record<"EGP" | "Proveedor", EnteOpcion[]>;
   existingMails: Set<string>;
   existingCIs: Set<string>;
+  /** Control fino simulado (filas 18/24): ¿el ente ya tiene un Admin activo? */
+  hasActiveAdmin: (dominio: "EGP" | "Proveedor", ente: string) => boolean;
   onClose: () => void;
   onSave: (u: Usuario) => void;
 }) {
-  const [form, setForm] = useState<FormValues>(EMPTY_FORM);
+  const dominiosPermitidos = allowedDomains;
+
+  // Con un solo dominio permitido el formulario arranca preseleccionado; el
+  // ente queda fijado al de la sesión solo en carga mismo-dominio. En carga
+  // inter-dominio el rol arranca forzado al Admin del ente hijo (excepción).
+  const [form, setForm] = useState<FormValues>(() => {
+    const unico = dominiosPermitidos.length === 1 ? dominiosPermitidos[0] : undefined;
+    if (!unico) return EMPTY_FORM;
+    return {
+      ...EMPTY_FORM,
+      dominio: unico,
+      ente: unico === sessionDomain && sessionEnte ? sessionEnte : "",
+      rol: forcedAdminRole(sessionDomain, unico) ?? "",
+    };
+  });
   const [errors, setErrors] = useState<Partial<Record<keyof FormValues, string>>>({});
   const [banner, setBanner] = useState<{ type: "err" | "warn"; text: string } | null>(null);
 
-  const dominiosPermitidos = DOMAIN_PERMISSIONS[sessionDomain];
   const showAD = form.dominio === "Banco";
   const showEnte = form.dominio === "EGP" || form.dominio === "Proveedor";
   const personalDisabled = form.dominio === "Banco"; // en Banco los datos vienen del AD
+  // Carga mismo-dominio: el ente queda fijo en el ente del usuario logueado.
+  const enteLocked = showEnte && form.dominio === sessionDomain && sessionEnte !== null;
+
+  // Excepción de carga inter-dominio (filas 18/24): cuando el dominio elegido es
+  // el "hijo" de la sesión, el alta queda restringida a crear el primer Admin de
+  // un ente que aún no tenga uno activo — no se puede cargar ningún otro rol.
+  const restricted = showEnte && form.dominio !== "" && CHILD_DOMAIN[sessionDomain] === form.dominio;
+  const forcedRole = restricted ? forcedAdminRole(sessionDomain, form.dominio) : null;
+
+  // Entes disponibles para el combo: los reales del store. En carga restringida
+  // solo se listan los que todavía no tienen un Admin activo (ni están bloqueados).
+  const enteOptions = useMemo<EnteOpcion[]>(() => {
+    if (!showEnte || form.dominio === "" || form.dominio === "Banco") return [];
+    const all = entesByDomain[form.dominio] ?? [];
+    if (!restricted) return all;
+    const dom = form.dominio as "EGP" | "Proveedor";
+    return all.filter((e) => !e.bloqueado && !hasActiveAdmin(dom, e.nombre));
+  }, [showEnte, form.dominio, entesByDomain, restricted, hasActiveAdmin]);
 
   const set = (patch: Partial<FormValues>) => setForm((f) => ({ ...f, ...patch }));
   const clearError = (k: keyof FormValues) =>
@@ -133,10 +177,17 @@ export function AltaUsuarioDialog({
       return rest;
     });
 
-  // Cambiar el dominio reconfigura los campos dependientes
+  // Cambiar el dominio reconfigura los campos dependientes; en carga
+  // mismo-dominio el ente queda preseteado con el de la sesión.
   function handleDominioChange(value: string) {
     const dom = value as Dominio;
-    setForm({ ...EMPTY_FORM, dominio: dom });
+    setForm({
+      ...EMPTY_FORM,
+      dominio: dom,
+      ente: dom === sessionDomain && sessionEnte ? sessionEnte : "",
+      // En carga inter-dominio el rol queda forzado al Admin del ente hijo.
+      rol: forcedAdminRole(sessionDomain, dom) ?? "",
+    });
     setErrors({});
     setBanner(null);
   }
@@ -164,7 +215,7 @@ export function AltaUsuarioDialog({
   function validateBack(): boolean {
     // Ente bloqueado
     if (showEnte && (form.dominio === "EGP" || form.dominio === "Proveedor")) {
-      const sel = ENTES[form.dominio].find((x) => x.nombre === form.ente);
+      const sel = (entesByDomain[form.dominio] ?? []).find((x) => x.nombre === form.ente);
       if (sel?.bloqueado) {
         setBanner({
           type: "warn",
@@ -173,6 +224,23 @@ export function AltaUsuarioDialog({
         setErrors((prev) => ({ ...prev, ente: "Ente bloqueado" }));
         return false;
       }
+    }
+    // Control fino simulado (filas 18/24): el alta inter-dominio de un
+    // Admin-EGP / Admin-Proveedor solo procede si el ente NO tiene ya un Admin
+    // activo. La carga mismo-dominio (p. ej. un Admin-EGP cargando otro
+    // Admin-EGP de su ente) no tiene esta restricción.
+    if (
+      form.dominio !== sessionDomain &&
+      (form.dominio === "EGP" || form.dominio === "Proveedor") &&
+      (form.rol === "Admin-EGP" || form.rol === "Admin-Proveedor") &&
+      hasActiveAdmin(form.dominio, form.ente)
+    ) {
+      setBanner({
+        type: "err",
+        text: `Ya existe un ${form.rol} activo para ${form.ente}: el alta inter-dominio solo permite cargar el primer ${form.rol} del ente.`,
+      });
+      setErrors((prev) => ({ ...prev, rol: `Ya hay un ${form.rol} activo` }));
+      return false;
     }
     // Email duplicado
     if (existingMails.has(form.mail.trim().toLowerCase())) {
@@ -207,11 +275,13 @@ export function AltaUsuarioDialog({
 
   const enteHint = useMemo(() => {
     if (!showEnte) return "";
-    if (sessionDomain === form.dominio)
-      return "Carga mismo dominio: el ente queda preseteado según el ente del usuario logueado.";
+    if (enteLocked)
+      return `Carga mismo dominio: el ente queda fijado en ${sessionEnte}, el ente con el que ingresaste.`;
+    if (restricted)
+      return `Excepción ${sessionDomain}→${form.dominio}: solo se listan los ${form.dominio} que aún no tienen un Admin activo (solo podés cargar el primero).`;
     if (form.dominio === "EGP") return "Inter-dominio Banco→EGP: se listan todos los EGP.";
-    return "Inter-dominio EGP→Proveedor: se listan los proveedores asociados.";
-  }, [showEnte, sessionDomain, form.dominio]);
+    return "Se listan los proveedores de la demo.";
+  }, [showEnte, enteLocked, restricted, sessionEnte, sessionDomain, form.dominio]);
 
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
@@ -274,34 +344,43 @@ export function AltaUsuarioDialog({
             </Field>
           )}
 
-          {/* Ente asociado (EGP / Proveedor) */}
+          {/* Ente asociado (EGP / Proveedor). En carga mismo-dominio queda
+              fijado al ente de la sesión; solo el Banco elige entre los EGP. */}
           {showEnte && form.dominio !== "" && form.dominio !== "Banco" && (
             <Field className="sm:col-span-2" label="Ente asociado" required error={errors.ente}>
-              <Select
-                value={form.ente}
-                onValueChange={(v) => {
-                  set({ ente: v });
-                  clearError("ente");
-                  setBanner(null);
-                }}
-              >
-                <SelectTrigger className="w-full" aria-invalid={!!errors.ente}>
-                  <SelectValue placeholder="Seleccione un ente…" />
-                </SelectTrigger>
-                <SelectContent>
-                  {ENTES[form.dominio].map((e) => (
-                    <SelectItem key={e.nombre} value={e.nombre}>
-                      {e.nombre}
-                      {e.bloqueado ? " (bloqueado)" : ""}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {restricted && enteOptions.length === 0 ? (
+                <div className="rounded-lg border border-amber-200 bg-amber-50 px-3.5 py-2.5 text-sm text-amber-800 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-300">
+                  Todos los {form.dominio} ya tienen un Admin activo: como {sessionDomain} no hay
+                  ningún ente al que cargarle el primer administrador.
+                </div>
+              ) : (
+                <Select
+                  value={form.ente}
+                  disabled={enteLocked}
+                  onValueChange={(v) => {
+                    set({ ente: v });
+                    clearError("ente");
+                    setBanner(null);
+                  }}
+                >
+                  <SelectTrigger className="w-full" aria-invalid={!!errors.ente}>
+                    <SelectValue placeholder="Seleccione un ente…" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {enteOptions.map((e) => (
+                      <SelectItem key={e.nombre} value={e.nombre} disabled={e.bloqueado}>
+                        {e.nombre}
+                        {e.bloqueado ? " (bloqueado)" : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
               <Hint>{enteHint}</Hint>
             </Field>
           )}
 
-          {/* Rol */}
+          {/* Rol. En carga inter-dominio queda forzado al Admin del ente hijo. */}
           <Field className="sm:col-span-2" label="Rol" required error={errors.rol}>
             <Select
               value={form.rol}
@@ -309,7 +388,7 @@ export function AltaUsuarioDialog({
                 set({ rol: v });
                 clearError("rol");
               }}
-              disabled={!form.dominio}
+              disabled={!form.dominio || restricted}
             >
               <SelectTrigger className="w-full" aria-invalid={!!errors.rol}>
                 <SelectValue
@@ -317,13 +396,21 @@ export function AltaUsuarioDialog({
                 />
               </SelectTrigger>
               <SelectContent>
-                {(form.dominio ? ROLES[form.dominio] : []).map((r) => (
-                  <SelectItem key={r} value={r}>
-                    {r}
-                  </SelectItem>
-                ))}
+                {(restricted && forcedRole ? [forcedRole] : form.dominio ? ROLES[form.dominio] : []).map(
+                  (r) => (
+                    <SelectItem key={r} value={r}>
+                      {r}
+                    </SelectItem>
+                  )
+                )}
               </SelectContent>
             </Select>
+            {restricted && (
+              <Hint>
+                Excepción {sessionDomain}→{form.dominio}: solo podés cargar el {forcedRole}; ningún
+                otro rol está habilitado.
+              </Hint>
+            )}
           </Field>
 
           {/* Datos personales */}

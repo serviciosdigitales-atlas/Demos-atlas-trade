@@ -201,7 +201,10 @@ export function AltaEnteDialog({
       telefono: telefono.trim(),
       // EGP viene de CORE (cliente del banco); Proveedor sin dato de API todavía.
       clienteAtlas: esEgp ? true : null,
-      estado: "Pendiente de Autorización",
+      // El alta de EGP es directa (no hay acción de aprobación: por eso no existe
+      // aprobar-alta:ente-egp). El Proveedor sí queda pendiente hasta que lo
+      // apruebe el supervisor-egp (aprobar-alta:ente-proveedor).
+      estado: esEgp ? "Activo" : "Pendiente de Autorización",
       facturas: "ninguna",
       // Datos financieros (monedas / línea de crédito) llegan con la historia de obtenerDatosEnte.
       ...(esEgp ? { monedas: [], lineaCredito: null, proveedoresAsociados: 0 } : { egpPadre }),

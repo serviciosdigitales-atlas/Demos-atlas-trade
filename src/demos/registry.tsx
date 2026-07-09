@@ -59,7 +59,7 @@ export const demos: DemoEntry[] = [
     slug: "alta-usuario",
     title: "Alta de usuario (ABM)",
     description:
-      "MAGIA-47 · El modal de alta abierto sobre la pantalla ABM: permisos por dominio, búsqueda AD, entes bloqueados y validación.",
+      "MAGIA-47 · El modal de alta abierto sobre la pantalla ABM: permisos por dominio, búsqueda AD, ente preseteado según la sesión y validación.",
     category: "Usuarios",
     status: "listo",
     component: AltaUsuarioDemo,
@@ -93,8 +93,9 @@ export interface TourStep {
 export const guidedTour: TourStep[] = [
   { slug: "login", nextLabel: "Ingresá para entrar al home" },
   { slug: "home", nextLabel: "Abrí “ABM” en el menú lateral" },
-  // El alta de usuario abre su modal sobre la misma pantalla ABM; guardarla completa el recorrido.
-  { slug: "abm", nextLabel: "En Usuarios, usá Alta → Nuevo usuario y guardá el alta" },
+  // El ABM es el último paso y funciona como espacio de trabajo libre (dar de
+  // alta entes/usuarios, aprobar, etc.); se finaliza con "Finalizar recorrido".
+  { slug: "abm", nextLabel: "Explorá el ABM: dá de alta entes y usuarios; finalizá cuando quieras" },
 ];
 
 /** Busca un demo por su slug. */

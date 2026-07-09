@@ -21,6 +21,7 @@ export function GuidedTour() {
 
   const total = guidedTour.length;
   const current = guidedTour[step];
+  const isLastStep = step === total - 1;
 
   function advance() {
     if (step < total - 1) setStep((s) => s + 1);
@@ -115,6 +116,15 @@ export function GuidedTour() {
               <span className="text-xs text-muted-foreground">👉 {current.nextLabel}</span>
             )}
           </div>
+
+          {/* En el último paso (ABM, espacio de trabajo libre) el recorrido se
+              finaliza a mano; en el resto avanza cada pantalla con su acción. */}
+          {isLastStep && (
+            <Button size="sm" className="ml-auto" onClick={advance}>
+              <Sparkles />
+              Finalizar recorrido
+            </Button>
+          )}
         </div>
 
         <main className="flex-1">{Component ? <Component /> : null}</main>

@@ -11,25 +11,33 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import selectorData from "../../../mock-data/login/mock-selector-dominio-roles.json";
+import { entesForRole, mockResponses } from "./mock-session";
 
 const domainRoles = selectorData as Record<string, string[]>;
 
 /**
  * Réplica del `MockLoginPanel` del front real: toggle "Modo Mock" + selector
  * dominio/rol. En el front real el estado vive en `useMockStore` (zustand);
- * acá lo maneja el demo por props.
+ * acá lo maneja el demo por props. Para roles egp/proveedor pide además
+ * elegir qué ente (EGP/Proveedor) "sos" antes de ingresar.
  */
 export function MockLoginPanel({
   enabled,
   role,
+  ente,
   onEnabledChange,
   onRoleChange,
+  onEnteChange,
 }: {
   enabled: boolean;
   role: string | null;
+  ente: string | null;
   onEnabledChange: (enabled: boolean) => void;
   onRoleChange: (role: string | null) => void;
+  onEnteChange: (ente: string | null) => void;
 }) {
+  const enteOptions = role ? entesForRole(role) : [];
+  const roleDomain = role ? mockResponses[role]?.user.domain : null;
   return (
     <div className="absolute top-3 right-3 z-30 flex flex-col items-end gap-2">
       <div className="flex items-center gap-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 shadow-sm">
@@ -62,7 +70,13 @@ export function MockLoginPanel({
       {enabled && (
         <div className="w-56 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 shadow-sm">
           <Label className="mb-1 block text-xs font-medium text-amber-700">Dominio / Rol</Label>
-          <Select value={role ?? ""} onValueChange={(val) => onRoleChange(val || null)}>
+          <Select
+            value={role ?? ""}
+            onValueChange={(val) => {
+              onRoleChange(val || null);
+              onEnteChange(null);
+            }}
+          >
             <SelectTrigger className="h-8 w-full bg-white text-xs">
               <SelectValue placeholder="Seleccionar rol..." />
             </SelectTrigger>
@@ -81,6 +95,27 @@ export function MockLoginPanel({
               ))}
             </SelectContent>
           </Select>
+
+          {/* Roles egp/proveedor: antes de entrar hay que elegir qué ente "sos". */}
+          {enteOptions.length > 0 && (
+            <>
+              <Label className="mt-2 mb-1 block text-xs font-medium text-amber-700">
+                {roleDomain === "egp" ? "¿Qué EGP sos?" : "¿Qué Proveedor sos?"}
+              </Label>
+              <Select value={ente ?? ""} onValueChange={(val) => onEnteChange(val || null)}>
+                <SelectTrigger className="h-8 w-full bg-white text-xs">
+                  <SelectValue placeholder="Seleccionar ente..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {enteOptions.map((e) => (
+                    <SelectItem key={e} value={e} className="text-xs">
+                      {e}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </>
+          )}
         </div>
       )}
     </div>

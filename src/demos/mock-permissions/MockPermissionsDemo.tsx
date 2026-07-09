@@ -23,6 +23,7 @@ import {
 import { PlatformShellDemo } from "@/demos/shared/PlatformShellDemo";
 import {
   clearMockSession,
+  entesForRole,
   getMockSession,
   groupPermissionsByResource,
   setMockSession,
@@ -59,7 +60,8 @@ export function MockPermissionsDemo() {
       ) : (
         <EmptyState
           onSelectRole={(role) => {
-            setMockSession(role);
+            // Sesión simulada sin pasar por el login: asume el primer ente del dominio.
+            setMockSession(role, entesForRole(role)[0] ?? null);
             setSession(getMockSession());
           }}
           onGoLogin={() => void navigate("/demos/login")}

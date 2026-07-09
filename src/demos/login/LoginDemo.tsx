@@ -15,17 +15,26 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useDemoFlow } from "@/app/flow";
 import { MockLoginPanel } from "./MockLoginPanel";
-import { clearMockSession, mockResponses, setMockSession } from "./mock-session";
+import {
+  clearMockSession,
+  entesForRole,
+  mockResponses,
+  setMockSession,
+} from "./mock-session";
 
 export function LoginDemo() {
   const [loading, setLoading] = useState(false);
   const [mockEnabled, setMockEnabled] = useState(false);
   const [selectedRole, setSelectedRole] = useState<string | null>(null);
+  const [selectedEnte, setSelectedEnte] = useState<string | null>(null);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const flow = useDemoFlow();
 
   const mockActive = mockEnabled && selectedRole !== null;
+  // Roles egp/proveedor deben elegir su ente (¿qué EGP/Proveedor sos?) antes de entrar.
+  const needsEnte = mockActive && entesForRole(selectedRole!).length > 0;
+  const missingEnte = needsEnte && selectedEnte === null;
 
   // Igual que el front real: al elegir un rol en modo mock se autocompletan
   // usuario = rol y contraseña = "1234".
@@ -46,9 +55,11 @@ export function LoginDemo() {
       setLoading(false);
       if (mockActive && selectedRole) {
         const entry = mockResponses[selectedRole];
-        setMockSession(selectedRole);
+        setMockSession(selectedRole, needsEnte ? selectedEnte : null);
         toast.success(`Sesión mock iniciada · ${selectedRole}`, {
-          description: `Dominio ${entry?.user.domain} · ${entry?.user.permissions.length ?? 0} permisos`,
+          description: `Dominio ${entry?.user.domain}${
+            needsEnte && selectedEnte ? ` · Ente ${selectedEnte}` : ""
+          } · ${entry?.user.permissions.length ?? 0} permisos`,
         });
       } else {
         // Login genérico del demo: sin rol mock, no queda sesión simulada.
@@ -65,8 +76,10 @@ export function LoginDemo() {
       <MockLoginPanel
         enabled={mockEnabled}
         role={selectedRole}
+        ente={selectedEnte}
         onEnabledChange={setMockEnabled}
         onRoleChange={setSelectedRole}
+        onEnteChange={setSelectedEnte}
       />
 
       <Card className="w-full max-w-sm">
@@ -120,10 +133,16 @@ export function LoginDemo() {
               />
             </div>
           </CardContent>
-          <CardFooter className="mt-4">
-            <Button type="submit" className="w-full" disabled={loading}>
+          <CardFooter className="mt-4 flex-col gap-2">
+            <Button type="submit" className="w-full" disabled={loading || missingEnte}>
               {loading ? "Ingresando…" : "Ingresar"}
             </Button>
+            {missingEnte && (
+              <p className="text-center text-xs text-amber-700">
+                Elegí qué {mockResponses[selectedRole!]?.user.domain === "egp" ? "EGP" : "Proveedor"}{" "}
+                sos en el panel de Modo Mock para poder ingresar.
+              </p>
+            )}
           </CardFooter>
         </form>
       </Card>

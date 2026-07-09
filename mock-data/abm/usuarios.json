@@ -3,25 +3,27 @@
     "nombre": "María",
     "apellido": "González",
     "ci": "4521789",
-    "mail": "maria.gonzalez@empresa.com.py",
+    "mail": "maria.gonzalez@biggie.com.py",
     "telefono": "0981123456",
     "acceso": "Activo",
     "estado": "Autorizado",
     "dominio": "egp",
-    "ente": "Distribuidora Central S.A.",
-    "rol": "admin-egp"
+    "ente": "Biggie",
+    "rol": "admin-egp",
+    "cargadoPor": { "usuario": "operador-banco", "dominio": "banco" }
   },
   {
     "nombre": "María",
     "apellido": "González",
     "ci": "4521789",
-    "mail": "maria.gonzalez@empresa.com.py",
+    "mail": "maria.gonzalez@biggie.com.py",
     "telefono": "0981123456",
     "acceso": "Activo",
     "estado": "Autorizado",
     "dominio": "proveedor",
-    "ente": "Proveedora del Sur",
-    "rol": "operador-proveedor"
+    "ente": "Massei",
+    "rol": "operador-proveedor",
+    "cargadoPor": { "usuario": "admin-proveedor", "dominio": "proveedor" }
   },
   {
     "nombre": "Carlos",
@@ -33,19 +35,21 @@
     "estado": "Pendiente de Autorización",
     "dominio": "banco",
     "ente": "Banco Atlas",
-    "rol": "operador-banco"
+    "rol": "operador-banco",
+    "cargadoPor": { "usuario": "admin-banco", "dominio": "banco" }
   },
   {
     "nombre": "Ana",
     "apellido": "Rodríguez",
     "ci": "5100234",
-    "mail": "ana.rodriguez@logistica.com.py",
+    "mail": "ana.rodriguez@ferrex.com.py",
     "telefono": "0991555666",
     "acceso": "Activo",
     "estado": "Autorizado",
     "dominio": "egp",
-    "ente": "Logística Norte S.R.L.",
-    "rol": "operador-egp"
+    "ente": "Ferrex",
+    "rol": "operador-egp",
+    "cargadoPor": { "usuario": "admin-egp", "dominio": "egp" }
   },
   {
     "nombre": "Pedro",
@@ -57,18 +61,33 @@
     "estado": "Autorizado",
     "dominio": "banco",
     "ente": "Banco Atlas",
-    "rol": "admin-banco"
+    "rol": "admin-banco",
+    "cargadoPor": { "usuario": "supervisor-banco", "dominio": "banco" }
   },
   {
     "nombre": "Lucía",
     "apellido": "Martínez",
     "ci": "6012987",
-    "mail": "lucia.martinez@insumos.com.py",
+    "mail": "lucia.martinez@nestle.com.py",
     "telefono": "0983444555",
     "acceso": "Activo",
     "estado": "Pendiente de Autorización",
     "dominio": "proveedor",
-    "ente": "Insumos del Este S.A.",
-    "rol": "admin-proveedor"
+    "ente": "Nestlé",
+    "rol": "admin-proveedor",
+    "cargadoPor": { "usuario": "supervisor-egp", "dominio": "egp" }
+  },
+  {
+    "nombre": "Jorge",
+    "apellido": "Duarte",
+    "ci": "3310678",
+    "mail": "jorge.duarte@lincoln.com.py",
+    "telefono": "0972333444",
+    "acceso": "Activo",
+    "estado": "Autorizado",
+    "dominio": "proveedor",
+    "ente": "Lincoln",
+    "rol": "operador-proveedor",
+    "cargadoPor": { "usuario": "admin-proveedor", "dominio": "proveedor" }
   }
 ]
