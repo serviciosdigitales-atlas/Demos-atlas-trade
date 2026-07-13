@@ -532,6 +532,22 @@ export function AbmDemo({ initialAltaUsuario = false }: { initialAltaUsuario?: b
     return rows.filter((e) => e.estado !== "Rechazado").map((e) => e.razonSocial);
   }, [domain, egpRowsState, provRowsState]);
 
+  // Control fino simulado (relación EGP↔Proveedor, 1:N): no todos los entes ven
+  // a todos. El filtro corre sobre el store de la sesión, así aplica igual a la
+  // semilla de los JSON y a las altas en memoria. Banco ve todo; un rol EGP solo
+  // ve su propio EGP y los Proveedores cuyo EGP padre es su ente; un rol
+  // Proveedor solo se ve a sí mismo.
+  const visibleEgpRows = useMemo(() => {
+    if (domain === "egp") return egpRowsState.filter((e) => e.razonSocial === ente);
+    if (domain === "proveedor") return [];
+    return egpRowsState;
+  }, [domain, ente, egpRowsState]);
+  const visibleProvRows = useMemo(() => {
+    if (domain === "egp") return provRowsState.filter((p) => p.egpPadre === ente);
+    if (domain === "proveedor") return provRowsState.filter((p) => p.razonSocial === ente);
+    return provRowsState;
+  }, [domain, ente, provRowsState]);
+
   function handleRoleChange(newRole: string, newEnte?: string | null) {
     const options = entesForRole(newRole);
     // Si el nuevo dominio necesita ente y no vino uno elegido, se asume el primero.
@@ -693,14 +709,15 @@ export function AbmDemo({ initialAltaUsuario = false }: { initialAltaUsuario?: b
 
   // Entes reales para el combo de alta de usuario: salen del store (semilla +
   // altas de la sesión), así un EGP/Proveedor recién creado aparece de una.
-  // Se excluyen los rechazados; los bloqueados se marcan como tales.
+  // Se excluyen los rechazados; los bloqueados se marcan como tales. Usa las
+  // filas visibles: un EGP solo puede cargar usuarios en sus propios Proveedores.
   const entesByDomain = useMemo(() => {
     const toOpcion = (rows: EnteRow[]) =>
       rows
         .filter((e) => e.estado !== "Rechazado")
         .map((e) => ({ nombre: e.razonSocial, bloqueado: e.estado === "Bloqueado" }));
-    return { EGP: toOpcion(egpRowsState), Proveedor: toOpcion(provRowsState) };
-  }, [egpRowsState, provRowsState]);
+    return { EGP: toOpcion(visibleEgpRows), Proveedor: toOpcion(visibleProvRows) };
+  }, [visibleEgpRows, visibleProvRows]);
 
   useEffect(() => {
     if (!visibleTabs.some((tab) => tab.id === activeTab)) {
@@ -860,12 +877,23 @@ export function AbmDemo({ initialAltaUsuario = false }: { initialAltaUsuario?: b
             )}
             {(activeTab === "egp" || activeTab === "proveedor") && (
               // key: resetea filtros al cambiar de pestaña o de rol (las filas viven acá arriba)
+              // rows: solo las visibles para el ente logueado; onRowsChange opera
+              // por id sobre el store completo, así las acciones no pisan filas ocultas.
               <EntesGrid
                 key={activeTab}
                 tipo={activeTab}
                 permissions={permissions}
-                rows={activeTab === "egp" ? egpRowsState : provRowsState}
+                rows={activeTab === "egp" ? visibleEgpRows : visibleProvRows}
                 onRowsChange={activeTab === "egp" ? setEgpRowsState : setProvRowsState}
+                scopeNote={
+                  domain === "egp"
+                    ? activeTab === "egp"
+                      ? `el rol del dominio EGP solo ve su propio ente (${ente}).`
+                      : `el rol del dominio EGP solo ve los Proveedores asociados a ${ente} — aplica igual a la semilla y a las altas de la sesión.`
+                    : domain === "proveedor"
+                      ? "el rol del dominio Proveedor solo ve su propio ente."
+                      : undefined
+                }
               />
             )}
             {activeTab === "notificaciones" && <NotificacionesGrid permissions={permissions} />}
@@ -908,8 +936,10 @@ export function AbmDemo({ initialAltaUsuario = false }: { initialAltaUsuario?: b
         <AltaEnteDialog
           tipo={altaEnte}
           existingRows={altaEnte === "egp" ? egpRowsState : provRowsState}
-          // EGP Padre: solo entes vigentes no bloqueados (se excluyen Bloqueado y Rechazado).
-          egpOptions={egpRowsState
+          // EGP Padre: solo entes vigentes no bloqueados (se excluyen Bloqueado y
+          // Rechazado). Filas visibles: un rol EGP solo puede asociar el Proveedor
+          // a su propio ente (relación EGP↔Proveedor).
+          egpOptions={visibleEgpRows
             .filter((e) => e.estado !== "Bloqueado" && e.estado !== "Rechazado")
             .map((e) => e.razonSocial)}
           onClose={() => setAltaEnte(null)}

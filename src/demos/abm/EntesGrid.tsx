@@ -77,11 +77,14 @@ export function EntesGrid({
   permissions,
   rows,
   onRowsChange,
+  scopeNote,
 }: {
   tipo: EnteTipo;
   permissions: Set<string>;
   rows: EnteRow[];
   onRowsChange: (updater: (rows: EnteRow[]) => EnteRow[]) => void;
+  /** Nota "control fino simulado" (relación EGP↔Proveedor): qué filas ve este dominio. */
+  scopeNote?: string;
 }) {
   const [busqueda, setBusqueda] = useState("");
   const [clienteAtlas, setClienteAtlas] = useState("ambos");
@@ -191,6 +194,16 @@ export function EntesGrid({
 
   return (
     <>
+      {/* Nota para quien presenta la demo: simula el control fino del back-end. */}
+      {scopeNote && (
+        <p className="border-b bg-muted/30 px-4 py-2 text-xs text-muted-foreground">
+          <span className="font-medium text-foreground">
+            Control fino simulado (sin backend):
+          </span>{" "}
+          {scopeNote}
+        </p>
+      )}
+
       {/* Filtros de cabecera (MAGIA-29), estilo Fenix (Central de Gestión). */}
       <FilterPanel
         onClear={() => {
