@@ -164,13 +164,29 @@ export function userActionsForRow(permissions: Set<string>, rowDomain: UsuarioDo
  * Control fino simulado: además del permiso visualizar:<recurso>, el Banco ve
  * todos los usuarios (de todos los dominios); los roles de EGP y Proveedor
  * solo ven los usuarios de su propia entidad (mismo dominio y mismo ente).
+ * Excepción EGP→Proveedor (filas 19/25): un rol EGP también ve las altas de
+ * usuarios de sus Proveedores hijos mientras están Pendientes de Autorización,
+ * solo si las cargó el dominio EGP. Quien cargó el alta la sigue viendo aunque
+ * no tenga visualizar:usuario-proveedor (seguimiento de su propia carga).
  */
 export function canViewUsuarioRow(
   permissions: Set<string>,
   viewerDomain: UsuarioDominio,
   viewerEnte: string | null,
+  viewerRole: string,
+  childEntes: ReadonlySet<string>,
   row: UsuarioRow
 ): boolean {
+  if (viewerDomain === "egp" && row.dominio === "proveedor") {
+    const altaPendienteDeHijo =
+      row.estado === "Pendiente de Autorización" &&
+      childEntes.has(row.ente) &&
+      row.cargadoPor.dominio === "egp";
+    if (!altaPendienteDeHijo) return false;
+    if (permissions.has("visualizar:usuario-proveedor")) return true;
+    // cargadoPor.usuario guarda el rol: el ente distingue al admin-egp de Biggie del de Ferrex.
+    return row.cargadoPor.usuario === viewerRole && row.cargadoPor.ente === viewerEnte;
+  }
   if (!permissions.has(`visualizar:usuario-${row.dominio}`)) return false;
   if (viewerDomain === "banco") return true;
   return row.dominio === viewerDomain && row.ente === viewerEnte;
@@ -247,6 +263,8 @@ function UsuariosGrid({
   permissions,
   viewerDomain,
   viewerEnte,
+  viewerRole,
+  childEntes,
   rows: sessionRows,
   onAprobar,
 }: {
@@ -255,6 +273,10 @@ function UsuariosGrid({
   viewerDomain: UsuarioDominio;
   /** Ente del rol logueado (null en banco): acota la grilla a la propia entidad. */
   viewerEnte: string | null;
+  /** Rol logueado: quien cargó un alta la sigue mientras está pendiente (filas 19/25). */
+  viewerRole: string;
+  /** Proveedores hijos del EGP logueado: sus altas pendientes se muestran al padre. */
+  childEntes: ReadonlySet<string>;
   /** Todos los usuarios de la sesión de recorrido (semilla + altas en memoria). */
   rows: UsuarioRow[];
   onAprobar: (row: UsuarioRow) => void;
@@ -262,8 +284,11 @@ function UsuariosGrid({
   const [filters, setFilters] = useState<UsuariosFilters>(USUARIOS_FILTERS_DEFAULT);
 
   const allRows = useMemo(
-    () => sessionRows.filter((u) => canViewUsuarioRow(permissions, viewerDomain, viewerEnte, u)),
-    [sessionRows, permissions, viewerDomain, viewerEnte]
+    () =>
+      sessionRows.filter((u) =>
+        canViewUsuarioRow(permissions, viewerDomain, viewerEnte, viewerRole, childEntes, u)
+      ),
+    [sessionRows, permissions, viewerDomain, viewerEnte, viewerRole, childEntes]
   );
   const rolOptions = useMemo(() => [...new Set(allRows.map((u) => u.rol))], [allRows]);
 
@@ -334,9 +359,11 @@ function UsuariosGrid({
       <p className="border-b bg-muted/30 px-4 py-2 text-xs text-muted-foreground">
         <span className="font-medium text-foreground">Controles finos simulados (sin backend):</span>{" "}
         el Banco ve todos los usuarios; los roles de EGP y Proveedor solo ven los usuarios de su
-        propia entidad (su ente). El primer Admin-EGP / Admin-Proveedor de un ente se carga desde
-        el dominio padre solo si no existe otro activo: la campanita junto a «Alta» avisa qué
-        entes hijos siguen sin Admin.
+        propia entidad (su ente). Excepción: un rol EGP también ve las altas de usuarios de sus
+        Proveedores hijos cargadas por su dominio mientras están Pendientes de Autorización
+        (quien las cargó las sigue aunque no tenga permiso de visualizar). El primer Admin-EGP /
+        Admin-Proveedor de un ente se carga desde el dominio padre solo si no existe otro activo:
+        la campanita junto a «Alta» avisa qué entes hijos siguen sin Admin.
       </p>
 
       {/* Filtros de cabecera (MAGIA-30), estilo Fenix (Central de Gestión). */}
@@ -618,6 +645,18 @@ export function AbmDemo({ initialAltaUsuario = false }: { initialAltaUsuario?: b
     if (domain === "proveedor") return provRowsState.filter((p) => p.razonSocial === ente);
     return provRowsState;
   }, [domain, ente, provRowsState]);
+
+  // Excepción EGP→Proveedor (filas 19/25): entes hijos del EGP logueado, para
+  // mostrarle las altas de usuarios pendientes de sus Proveedores.
+  const childProvEntes = useMemo(
+    () =>
+      new Set(
+        domain === "egp"
+          ? provRowsState.filter((p) => p.egpPadre === ente).map((p) => p.razonSocial)
+          : []
+      ),
+    [domain, ente, provRowsState]
+  );
 
   function handleRoleChange(newRole: string, newEnte?: string | null) {
     const options = entesForRole(newRole);
@@ -992,6 +1031,8 @@ export function AbmDemo({ initialAltaUsuario = false }: { initialAltaUsuario?: b
                 permissions={permissions}
                 viewerDomain={domain as UsuarioDominio}
                 viewerEnte={ente}
+                viewerRole={role}
+                childEntes={childProvEntes}
                 rows={usuariosRows}
                 onAprobar={setAprobarUsuario}
               />
