@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Bell, ChevronDown, Eye, FolderCheck, Lock, Pencil, Plus } from "lucide-react";
+import { Bell, Eye, FolderCheck, Lock, Pencil, Plus } from "lucide-react";
 import { toast } from "sonner";
 
 import { useDemoFlow } from "@/app/flow";
@@ -976,26 +976,12 @@ export function AbmDemo({ initialAltaUsuario = false }: { initialAltaUsuario?: b
                   </DropdownMenu>
                 )}
 
+                {/* La pestaña activa ya define qué se da de alta: botón directo, sin menú. */}
                 {altaOptions.length > 0 && (
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button>
-                        <Plus />
-                        Alta
-                        <ChevronDown className="opacity-70" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="min-w-44">
-                      {altaOptions.map((opt, index) => (
-                        <div key={opt.id}>
-                          {index > 0 && <DropdownMenuSeparator />}
-                          <DropdownMenuItem onSelect={() => handleAltaOption(opt)}>
-                            {opt.label}
-                          </DropdownMenuItem>
-                        </div>
-                      ))}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                  <Button onClick={() => handleAltaOption(altaOptions[0])}>
+                    <Plus />
+                    Alta
+                  </Button>
                 )}
               </div>
             </div>
