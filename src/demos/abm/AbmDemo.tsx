@@ -40,6 +40,7 @@ import {
 } from "@/demos/login/mock-session";
 import {
   AltaUsuarioDialog,
+  type AdminSlotStatus,
   type Dominio,
   type Usuario,
 } from "@/demos/alta-usuario/AltaUsuarioDialog";
@@ -266,6 +267,7 @@ function UsuariosGrid({
   viewerRole,
   childEntes,
   rows: sessionRows,
+  initialFilters,
   onAprobar,
 }: {
   permissions: Set<string>;
@@ -279,9 +281,14 @@ function UsuariosGrid({
   childEntes: ReadonlySet<string>;
   /** Todos los usuarios de la sesión de recorrido (semilla + altas en memoria). */
   rows: UsuarioRow[];
+  /** Filtros iniciales (campanita → "Ver alta pendiente"); solo al montar. */
+  initialFilters?: Partial<UsuariosFilters>;
   onAprobar: (row: UsuarioRow) => void;
 }) {
-  const [filters, setFilters] = useState<UsuariosFilters>(USUARIOS_FILTERS_DEFAULT);
+  const [filters, setFilters] = useState<UsuariosFilters>({
+    ...USUARIOS_FILTERS_DEFAULT,
+    ...initialFilters,
+  });
 
   const allRows = useMemo(
     () =>
@@ -362,8 +369,10 @@ function UsuariosGrid({
         propia entidad (su ente). Excepción: un rol EGP también ve las altas de usuarios de sus
         Proveedores hijos cargadas por su dominio mientras están Pendientes de Autorización
         (quien las cargó las sigue aunque no tenga permiso de visualizar). El primer Admin-EGP /
-        Admin-Proveedor de un ente se carga desde el dominio padre solo si no existe otro activo:
-        la campanita junto a «Alta» avisa qué entes hijos siguen sin Admin.
+        Admin-Proveedor de un ente se carga desde el dominio padre solo si el slot de Admin está
+        libre — un Admin autorizado o un alta pendiente de aprobación lo ocupan. La campanita
+        junto a «Alta» avisa qué entes hijos siguen sin Admin y cuáles tienen su alta de Admin
+        esperando aprobación.
       </p>
 
       {/* Filtros de cabecera (MAGIA-30), estilo Fenix (Central de Gestión). */}
@@ -620,6 +629,13 @@ export function AbmDemo({ initialAltaUsuario = false }: { initialAltaUsuario?: b
   const [altaEnte, setAltaEnte] = useState<EnteTipo | null>(null);
   // Usuario pendiente elegido para aprobar: abre el modal de aprobación.
   const [aprobarUsuario, setAprobarUsuario] = useState<UsuarioRow | null>(null);
+  // Prefiltro de la grilla de Usuarios aplicado desde la campanita (ítem de
+  // "alta de Admin pendiente"): remonta la grilla ya filtrada por ente+estado.
+  // `seq` fuerza el remontaje aunque se elija dos veces el mismo ente.
+  const [usuariosPrefilter, setUsuariosPrefilter] = useState<{
+    seq: number;
+    filters: Partial<UsuariosFilters>;
+  } | null>(null);
 
   const sessionActive = getMockSession() !== null;
   const domain = mockResponses[role]?.user.domain ?? "banco";
@@ -659,22 +675,33 @@ export function AbmDemo({ initialAltaUsuario = false }: { initialAltaUsuario?: b
   );
 
   function handleRoleChange(newRole: string, newEnte?: string | null) {
-    const options = entesForRole(newRole);
-    // Si el nuevo dominio necesita ente y no vino uno elegido, se asume el primero.
+    // Valida contra el store de la sesión (igual que `enteOptions`), así un ente
+    // creado durante el recorrido también se conserva al cambiar de rol.
+    const newDomain = mockResponses[newRole]?.user.domain ?? "banco";
+    const rows = newDomain === "egp" ? egpRowsState : newDomain === "proveedor" ? provRowsState : [];
+    const options = rows.filter((e) => e.estado !== "Rechazado").map((e) => e.razonSocial);
+    // Si el nuevo dominio necesita ente: usa el que vino elegido; si no vino,
+    // conserva el actual mientras siga siendo válido (mismo dominio) y recién
+    // ahí cae al primero.
     const nextEnte =
       options.length === 0
         ? null
         : newEnte && options.includes(newEnte)
           ? newEnte
-          : (options[0] ?? null);
+          : ente && options.includes(ente)
+            ? ente
+            : (options[0] ?? null);
     setRole(newRole);
     setEnte(nextEnte);
+    // El prefiltro de la campanita pertenece al rol/ente anterior.
+    setUsuariosPrefilter(null);
     // Mantiene la sesión mock alineada con el rol/ente elegido (sidebar incluido).
     if (getMockSession()) setMockSession(newRole, nextEnte);
   }
 
   function handleEnteChange(newEnte: string) {
     setEnte(newEnte);
+    setUsuariosPrefilter(null);
     if (getMockSession()) setMockSession(role, newEnte);
   }
 
@@ -760,14 +787,18 @@ export function AbmDemo({ initialAltaUsuario = false }: { initialAltaUsuario?: b
   }
 
   /**
-   * Control fino simulado (filas 18/24): el alta inter-dominio de un Admin-EGP /
-   * Admin-Proveedor solo procede si el ente aún no tiene un Admin activo.
+   * Control fino simulado (filas 18/24): estado del slot de Admin de un ente.
+   * Un Admin autorizado lo ocupa, y un alta de Admin Pendiente de Autorización
+   * también (bloquea cargas duplicadas), pero se distinguen: el pendiente se
+   * avisa como "alta esperando aprobación" en la campanita y en el alta.
    */
-  function hasActiveAdmin(dominio: "EGP" | "Proveedor", enteNombre: string): boolean {
+  function adminSlotStatus(dominio: "EGP" | "Proveedor", enteNombre: string): AdminSlotStatus {
     const rolAdmin = dominio === "EGP" ? "admin-egp" : "admin-proveedor";
-    return usuariosRows.some(
+    const admins = usuariosRows.filter(
       (u) => u.rol === rolAdmin && u.ente === enteNombre && u.acceso === "Activo"
     );
+    if (admins.some((u) => u.estado === "Autorizado")) return "autorizado";
+    return admins.length > 0 ? "pendiente" : "sin-admin";
   }
 
   /**
@@ -831,25 +862,29 @@ export function AbmDemo({ initialAltaUsuario = false }: { initialAltaUsuario?: b
   }, [visibleEgpRows, visibleProvRows]);
 
   // Flujo excepcional (filas 18/24): cuando el dominio padre carga un ente
-  // nuevo, ese ente queda sin Admin activo. La campanita se la mostramos al rol
-  // que puede cargar ese Admin (admin-banco→Admin-EGP, admin-egp→Admin-Proveedor)
-  // con los entes hijos que siguen pendientes.
+  // nuevo, ese ente queda sin Admin. La campanita se la mostramos al rol que
+  // puede cargar ese Admin (admin-banco→Admin-EGP, admin-egp→Admin-Proveedor)
+  // con dos avisos distintos: entes hijos SIN Admin (acción: cargarlo) y entes
+  // con un alta de Admin todavía pendiente de aprobación (seguimiento).
   const childAdminDomain: "EGP" | "Proveedor" | null =
     domain === "banco" ? "EGP" : domain === "egp" ? "Proveedor" : null;
-  const pendingAdminEntes = useMemo(() => {
-    if (!childAdminDomain) return [];
-    if (!permissions.has(`cargar:usuario-${childAdminDomain.toLowerCase()}`)) return [];
+  const adminAlerts = useMemo(() => {
+    const alerts = { sinAdmin: [] as string[], pendientes: [] as string[] };
+    if (!childAdminDomain) return alerts;
+    if (!permissions.has(`cargar:usuario-${childAdminDomain.toLowerCase()}`)) return alerts;
     const rolAdmin = childAdminDomain === "EGP" ? "admin-egp" : "admin-proveedor";
-    return entesByDomain[childAdminDomain]
-      .filter(
-        (e) =>
-          !e.bloqueado &&
-          !usuariosRows.some(
-            (u) => u.rol === rolAdmin && u.ente === e.nombre && u.acceso === "Activo"
-          )
-      )
-      .map((e) => e.nombre);
+    for (const e of entesByDomain[childAdminDomain]) {
+      if (e.bloqueado) continue;
+      const admins = usuariosRows.filter(
+        (u) => u.rol === rolAdmin && u.ente === e.nombre && u.acceso === "Activo"
+      );
+      if (admins.some((u) => u.estado === "Autorizado")) continue;
+      if (admins.length > 0) alerts.pendientes.push(e.nombre);
+      else alerts.sinAdmin.push(e.nombre);
+    }
+    return alerts;
   }, [childAdminDomain, permissions, entesByDomain, usuariosRows]);
+  const adminAlertCount = adminAlerts.sinAdmin.length + adminAlerts.pendientes.length;
 
   useEffect(() => {
     if (!visibleTabs.some((tab) => tab.id === activeTab)) {
@@ -979,40 +1014,72 @@ export function AbmDemo({ initialAltaUsuario = false }: { initialAltaUsuario?: b
               </div>
 
               <div className="flex items-center gap-2">
-                {/* Campanita (filas 18/24): entes hijos sin Admin activo. Cada ítem
-                    abre el alta apuntada a cargar SOLO ese primer Admin. */}
-                {activeTab === "usuarios" && pendingAdminEntes.length > 0 && (
+                {/* Campanita (filas 18/24), dos avisos: entes hijos SIN Admin (el
+                    ítem abre el alta apuntada a cargar SOLO ese primer Admin) y
+                    entes con alta de Admin pendiente de aprobación (el ítem filtra
+                    la grilla para verla). */}
+                {activeTab === "usuarios" && adminAlertCount > 0 && (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button
                         variant="outline"
                         size="icon"
                         className="relative"
-                        aria-label={`${pendingAdminEntes.length} ente(s) sin Admin activo`}
+                        aria-label={`${adminAlertCount} aviso(s) de Admin de ${childAdminDomain} pendiente`}
                       >
                         <UserPlus />
                         <span className="absolute -top-1.5 -right-1.5 flex size-5 items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-destructive-foreground">
-                          {pendingAdminEntes.length}
+                          {adminAlertCount}
                         </span>
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="min-w-64">
-                      <p className="px-2 py-1.5 text-xs text-muted-foreground">
-                        {childAdminDomain} sin Admin activo: cargá su primer Admin-
-                        {childAdminDomain}.
-                      </p>
-                      <DropdownMenuSeparator />
-                      {pendingAdminEntes.map((nombre) => (
-                        <DropdownMenuItem
-                          key={nombre}
-                          onSelect={() => {
-                            setAltaAdminEnte(nombre);
-                            setAltaUsuarioOpen(true);
-                          }}
-                        >
-                          Cargar Admin-{childAdminDomain} · {nombre}
-                        </DropdownMenuItem>
-                      ))}
+                      {adminAlerts.sinAdmin.length > 0 && (
+                        <>
+                          <p className="px-2 py-1.5 text-xs text-muted-foreground">
+                            {childAdminDomain} sin Admin: cargá su primer Admin-
+                            {childAdminDomain}.
+                          </p>
+                          <DropdownMenuSeparator />
+                          {adminAlerts.sinAdmin.map((nombre) => (
+                            <DropdownMenuItem
+                              key={nombre}
+                              onSelect={() => {
+                                setAltaAdminEnte(nombre);
+                                setAltaUsuarioOpen(true);
+                              }}
+                            >
+                              Cargar Admin-{childAdminDomain} · {nombre}
+                            </DropdownMenuItem>
+                          ))}
+                        </>
+                      )}
+                      {adminAlerts.pendientes.length > 0 && (
+                        <>
+                          {adminAlerts.sinAdmin.length > 0 && <DropdownMenuSeparator />}
+                          <p className="px-2 py-1.5 text-xs text-muted-foreground">
+                            Alta de Admin-{childAdminDomain} esperando aprobación: el ente no
+                            queda operativo hasta que se apruebe.
+                          </p>
+                          <DropdownMenuSeparator />
+                          {adminAlerts.pendientes.map((nombre) => (
+                            <DropdownMenuItem
+                              key={nombre}
+                              onSelect={() =>
+                                setUsuariosPrefilter((p) => ({
+                                  seq: (p?.seq ?? 0) + 1,
+                                  filters: {
+                                    ente: nombre,
+                                    estado: "Pendiente de Autorización",
+                                  },
+                                }))
+                              }
+                            >
+                              Ver alta pendiente · {nombre}
+                            </DropdownMenuItem>
+                          ))}
+                        </>
+                      )}
                     </DropdownMenuContent>
                   </DropdownMenu>
                 )}
@@ -1027,13 +1094,17 @@ export function AbmDemo({ initialAltaUsuario = false }: { initialAltaUsuario?: b
             </div>
 
             {activeTab === "usuarios" && (
+              // key: remonta la grilla cuando la campanita aplica un prefiltro
+              // (los filtros viven adentro y solo se leen al montar).
               <UsuariosGrid
+                key={`usuarios-${usuariosPrefilter?.seq ?? 0}`}
                 permissions={permissions}
                 viewerDomain={domain as UsuarioDominio}
                 viewerEnte={ente}
                 viewerRole={role}
                 childEntes={childProvEntes}
                 rows={usuariosRows}
+                initialFilters={usuariosPrefilter?.filters}
                 onAprobar={setAprobarUsuario}
               />
             )}
@@ -1119,7 +1190,7 @@ export function AbmDemo({ initialAltaUsuario = false }: { initialAltaUsuario?: b
           entesByDomain={entesByDomain}
           existingMails={sessionMails}
           existingCIs={sessionCIs}
-          hasActiveAdmin={hasActiveAdmin}
+          adminSlotStatus={adminSlotStatus}
           initialSelection={
             altaAdminEnte && childAdminDomain
               ? { dominio: childAdminDomain, ente: altaAdminEnte }

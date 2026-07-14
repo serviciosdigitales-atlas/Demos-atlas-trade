@@ -38,6 +38,14 @@ const AD_USERS: AdUser[] = [
 // así un EGP/Proveedor recién creado aparece acá sin recargar.
 export type EnteOpcion = { nombre: string; bloqueado: boolean };
 
+/**
+ * Estado del "slot" de Admin de un ente hijo (filas 18/24): sin Admin, con un
+ * alta de Admin Pendiente de Autorización, o con un Admin ya autorizado. Un
+ * pendiente también ocupa el lugar (evita cargas duplicadas), pero se avisa
+ * distinto: el alta sigue esperando aprobación, no hay que cargar otra.
+ */
+export type AdminSlotStatus = "sin-admin" | "pendiente" | "autorizado";
+
 // Alineado con los roles reales del login (mock-selector-dominio-roles.json).
 const ROLES: Record<Dominio, string[]> = {
   Banco: ["Admin-Banco", "Operador-Banco", "Supervisor-Banco"],
@@ -109,7 +117,7 @@ export function AltaUsuarioDialog({
   entesByDomain,
   existingMails,
   existingCIs,
-  hasActiveAdmin,
+  adminSlotStatus,
   initialSelection = null,
   onClose,
   onSave,
@@ -126,8 +134,8 @@ export function AltaUsuarioDialog({
   entesByDomain: Record<"EGP" | "Proveedor", EnteOpcion[]>;
   existingMails: Set<string>;
   existingCIs: Set<string>;
-  /** Control fino simulado (filas 18/24): ¿el ente ya tiene un Admin activo? */
-  hasActiveAdmin: (dominio: "EGP" | "Proveedor", ente: string) => boolean;
+  /** Control fino simulado (filas 18/24): estado del slot de Admin del ente. */
+  adminSlotStatus: (dominio: "EGP" | "Proveedor", ente: string) => AdminSlotStatus;
   /**
    * Abre el modal ya apuntado a un dominio/ente (campanita del ABM: carga del
    * primer Admin de un ente hijo recién creado). El rol queda forzado al Admin.
@@ -175,14 +183,15 @@ export function AltaUsuarioDialog({
   const forcedRole = restricted ? forcedAdminRole(sessionDomain, form.dominio) : null;
 
   // Entes disponibles para el combo: los reales del store. En carga restringida
-  // solo se listan los que todavía no tienen un Admin activo (ni están bloqueados).
+  // solo se listan los que todavía tienen el slot de Admin libre (un alta de
+  // Admin pendiente también lo ocupa) y no están bloqueados.
   const enteOptions = useMemo<EnteOpcion[]>(() => {
     if (!showEnte || form.dominio === "" || form.dominio === "Banco") return [];
     const all = entesByDomain[form.dominio] ?? [];
     if (!restricted) return all;
     const dom = form.dominio as "EGP" | "Proveedor";
-    return all.filter((e) => !e.bloqueado && !hasActiveAdmin(dom, e.nombre));
-  }, [showEnte, form.dominio, entesByDomain, restricted, hasActiveAdmin]);
+    return all.filter((e) => !e.bloqueado && adminSlotStatus(dom, e.nombre) === "sin-admin");
+  }, [showEnte, form.dominio, entesByDomain, restricted, adminSlotStatus]);
 
   const set = (patch: Partial<FormValues>) => setForm((f) => ({ ...f, ...patch }));
   const clearError = (k: keyof FormValues) =>
@@ -240,21 +249,34 @@ export function AltaUsuarioDialog({
       }
     }
     // Control fino simulado (filas 18/24): el alta inter-dominio de un
-    // Admin-EGP / Admin-Proveedor solo procede si el ente NO tiene ya un Admin
-    // activo. La carga mismo-dominio (p. ej. un Admin-EGP cargando otro
-    // Admin-EGP de su ente) no tiene esta restricción.
+    // Admin-EGP / Admin-Proveedor solo procede si el slot de Admin del ente
+    // está libre. Un Admin autorizado lo ocupa, y un alta de Admin pendiente
+    // también (evita cargas duplicadas mientras se espera la aprobación). La
+    // carga mismo-dominio (p. ej. un Admin-EGP cargando otro Admin-EGP de su
+    // ente) no tiene esta restricción.
     if (
       form.dominio !== sessionDomain &&
       (form.dominio === "EGP" || form.dominio === "Proveedor") &&
-      (form.rol === "Admin-EGP" || form.rol === "Admin-Proveedor") &&
-      hasActiveAdmin(form.dominio, form.ente)
+      (form.rol === "Admin-EGP" || form.rol === "Admin-Proveedor")
     ) {
-      setBanner({
-        type: "err",
-        text: `Ya existe un ${form.rol} activo para ${form.ente}: el alta inter-dominio solo permite cargar el primer ${form.rol} del ente.`,
-      });
-      setErrors((prev) => ({ ...prev, rol: `Ya hay un ${form.rol} activo` }));
-      return false;
+      const status = adminSlotStatus(form.dominio, form.ente);
+      if (status !== "sin-admin") {
+        setBanner({
+          type: "err",
+          text:
+            status === "autorizado"
+              ? `Ya existe un ${form.rol} autorizado para ${form.ente}: el alta inter-dominio solo permite cargar el primer ${form.rol} del ente.`
+              : `Ya hay un alta de ${form.rol} pendiente de aprobación para ${form.ente}: no se puede cargar otro hasta que se apruebe.`,
+        });
+        setErrors((prev) => ({
+          ...prev,
+          rol:
+            status === "autorizado"
+              ? `Ya hay un ${form.rol} autorizado`
+              : `Ya hay un ${form.rol} pendiente`,
+        }));
+        return false;
+      }
     }
     // Email duplicado
     if (existingMails.has(form.mail.trim().toLowerCase())) {
@@ -292,7 +314,7 @@ export function AltaUsuarioDialog({
     if (enteLocked)
       return `Carga mismo dominio: el ente queda fijado en ${sessionEnte}, el ente con el que ingresaste.`;
     if (restricted)
-      return `Excepción ${sessionDomain}→${form.dominio}: solo se listan los ${form.dominio} que aún no tienen un Admin activo (solo podés cargar el primero).`;
+      return `Excepción ${sessionDomain}→${form.dominio}: solo se listan los ${form.dominio} con el slot de Admin libre — un Admin autorizado o un alta pendiente de aprobación lo ocupan (solo podés cargar el primero).`;
     if (form.dominio === "EGP") return "Inter-dominio Banco→EGP: se listan todos los EGP.";
     return "Se listan los proveedores de la demo.";
   }, [showEnte, enteLocked, restricted, sessionEnte, sessionDomain, form.dominio]);
@@ -364,8 +386,9 @@ export function AltaUsuarioDialog({
             <Field className="sm:col-span-2" label="Ente asociado" required error={errors.ente}>
               {restricted && enteOptions.length === 0 ? (
                 <div className="rounded-lg border border-amber-200 bg-amber-50 px-3.5 py-2.5 text-sm text-amber-800 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-300">
-                  Todos los {form.dominio} ya tienen un Admin activo: como {sessionDomain} no hay
-                  ningún ente al que cargarle el primer administrador.
+                  Todos los {form.dominio} ya tienen un Admin autorizado o un alta de Admin
+                  pendiente de aprobación: como {sessionDomain} no hay ningún ente al que cargarle
+                  el primer administrador.
                 </div>
               ) : (
                 <Select
