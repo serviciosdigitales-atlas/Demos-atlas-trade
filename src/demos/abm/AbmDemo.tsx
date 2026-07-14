@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Bell, Eye, FolderCheck, Lock, Pencil, Plus } from "lucide-react";
+import { Eye, FolderCheck, Lock, Pencil, Plus, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 
 import { useDemoFlow } from "@/app/flow";
@@ -949,7 +949,7 @@ export function AbmDemo({ initialAltaUsuario = false }: { initialAltaUsuario?: b
                         className="relative"
                         aria-label={`${pendingAdminEntes.length} ente(s) sin Admin activo`}
                       >
-                        <Bell />
+                        <UserPlus />
                         <span className="absolute -top-1.5 -right-1.5 flex size-5 items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-destructive-foreground">
                           {pendingAdminEntes.length}
                         </span>
