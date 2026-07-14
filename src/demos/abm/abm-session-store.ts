@@ -11,8 +11,12 @@ import { egpRows, proveedorRows, type EnteRow } from "./abm-shared";
 
 export type UsuarioDominio = "banco" | "egp" | "proveedor";
 
-/** Quién cargó al usuario: base de los controles finos simulados (matriz filas 18-26). */
-export type CargadoPor = { usuario: string; dominio: UsuarioDominio };
+/**
+ * Quién cargó al usuario: base de los controles finos simulados (matriz filas 18-26).
+ * `ente` es el ente del creador (null para banco, que es una única entidad):
+ * define qué altas inter-dominio ve cada ente en la grilla de Usuarios.
+ */
+export type CargadoPor = { usuario: string; dominio: UsuarioDominio; ente?: string | null };
 
 /** Fila de la grilla de Usuarios (MAGIA-30). Un usuario con varios entes aparece una vez por ente. */
 export type UsuarioRow = {

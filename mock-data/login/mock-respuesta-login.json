@@ -7,7 +7,7 @@
       "role": "operador-banco",
       "domain": "banco",
       "permissions": [
-        "cargar:usuario-egp",
+        "cargar:ente-egp",
         "visualizar:ente-egp",
         "visualizar:ente-proveedor",
         "visualizar:usuario-egp"
@@ -25,7 +25,6 @@
         "aprobar-alta:usuario-egp",
         "bloquear:ente-egp",
         "borrar:ente-egp",
-        "cargar:ente-egp",
         "cargar:usuario-banco",
         "modificar:ente-egp",
         "visualizar:ente-egp",
@@ -47,9 +46,12 @@
         "aprobar-alta:usuario-banco",
         "bloquear:usuario-banco",
         "cargar:usuario-banco",
+        "cargar:usuario-egp",
         "modificar:usuario-banco",
         "visualizar:notificaciones",
-        "visualizar:usuario-banco"
+        "visualizar:usuario-banco",
+        "visualizar:usuario-egp",
+        "visualizar:usuario-proveedor"
       ]
     }
   },
@@ -62,7 +64,6 @@
       "domain": "egp",
       "permissions": [
         "cargar:ente-proveedor",
-        "cargar:usuario-proveedor",
         "visualizar:usuario-proveedor"
       ]
     }
@@ -110,6 +111,7 @@
         "aprobar-alta:usuario-egp",
         "bloquear:usuario-egp",
         "cargar:usuario-egp",
+        "cargar:usuario-proveedor",
         "modificar:usuario-egp",
         "visualizar:notificaciones",
         "visualizar:usuario-egp"

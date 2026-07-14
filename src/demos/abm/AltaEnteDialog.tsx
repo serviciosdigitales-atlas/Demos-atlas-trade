@@ -1,6 +1,5 @@
-import { useRef, useState } from "react";
-import { AlertTriangle, FileText, Paperclip, X } from "lucide-react";
-import { toast } from "sonner";
+import { useState } from "react";
+import { AlertTriangle } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -21,8 +20,6 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import {
-  ADJUNTO_ERROR,
-  adjuntoValido,
   emailValido,
   RUC_MAX,
   rucValido,
@@ -38,20 +35,38 @@ import { Field } from "./ente-modals";
 /**
  * La EGP debe existir en CORE como cliente del banco (comentario funcional MAGIA-38):
  * al ingresar el RUC se autocompletan los demás datos. RUC que no figure acá →
- * "no activa como cliente del banco". Datos financieros quedan para otra historia.
+ * "no activa como cliente del banco". Monedas y línea de crédito simulan la
+ * respuesta de obtenerDatosEnte, así el alta llega a la grilla con datos financieros.
  */
-const CORE_EGP: Record<string, { razonSocial: string; email?: string; telefono?: string }> = {
+const CORE_EGP: Record<
+  string,
+  {
+    razonSocial: string;
+    email?: string;
+    telefono?: string;
+    monedas: string[];
+    lineaCredito: EnteRow["lineaCredito"];
+  }
+> = {
   "80099888-7": {
     razonSocial: "Comercial Asunción S.A.",
     email: "contacto@comercialasu.com.py",
     telefono: "+59521555780",
+    monedas: ["PYG", "USD"],
+    lineaCredito: { currencyCode: "PYG", amount: 1200000000 },
   },
   "80088777-6": {
     razonSocial: "Ganadera del Chaco S.A.",
     email: "administracion@ganaderachaco.com.py",
     telefono: "+59598111222",
+    monedas: ["PYG"],
+    lineaCredito: { currencyCode: "PYG", amount: 600000000 },
   },
-  "80077666-5": { razonSocial: "Textil Guaraní S.R.L." },
+  "80077666-5": {
+    razonSocial: "Textil Guaraní S.R.L.",
+    monedas: ["USD"],
+    lineaCredito: { currencyCode: "USD", amount: 250000 },
+  },
 };
 
 /** RUCs de prueba para mostrar el flujo en la demo. */
@@ -92,12 +107,10 @@ export function AltaEnteDialog({
   const [email, setEmail] = useState("");
   const [telefono, setTelefono] = useState("");
   const [egpPadre, setEgpPadre] = useState("");
-  const [adjuntos, setAdjuntos] = useState<string[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [banner, setBanner] = useState<Banner>(null);
   // Proveedor ya registrado: datos generales recuperados, solo se asocia el nuevo EGP.
   const [reutilizado, setReutilizado] = useState(false);
-  const fileRef = useRef<HTMLInputElement>(null);
 
   const clearError = (key: string) =>
     setErrors((e) => {
@@ -193,6 +206,8 @@ export function AltaEnteDialog({
   function handleGuardar() {
     setBanner(null);
     if (!validate()) return;
+    // Datos financieros mockeados de obtenerDatosEnte (solo EGP; el RUC validó contra CORE).
+    const core = esEgp ? CORE_EGP[ruc.trim()] : undefined;
     onSave({
       id: `${tipo}-alta-${ruc.trim()}`,
       ruc: ruc.trim(),
@@ -206,17 +221,14 @@ export function AltaEnteDialog({
       // apruebe el supervisor-egp (aprobar-alta:ente-proveedor).
       estado: esEgp ? "Activo" : "Pendiente de Autorización",
       facturas: "ninguna",
-      // Datos financieros (monedas / línea de crédito) llegan con la historia de obtenerDatosEnte.
-      ...(esEgp ? { monedas: [], lineaCredito: null, proveedoresAsociados: 0 } : { egpPadre }),
+      ...(esEgp
+        ? {
+            monedas: core?.monedas ?? [],
+            lineaCredito: core?.lineaCredito ?? null,
+            proveedoresAsociados: 0,
+          }
+        : { egpPadre }),
     });
-  }
-
-  function handleAdjunto(file: File) {
-    if (!adjuntoValido(file)) {
-      toast.error(ADJUNTO_ERROR);
-      return;
-    }
-    setAdjuntos((a) => [...a, file.name]);
   }
 
   const inputError = "border-red-500 focus-visible:ring-red-500/30";
@@ -337,53 +349,6 @@ export function AltaEnteDialog({
               className={cn(errors.telefono && inputError)}
             />
           </Field>
-        </div>
-
-        {/* Documentación legal al pie del modal (MAGIA-38/39 esc. 1 y 5). */}
-        <div className="rounded-lg border p-4">
-          <p className="mb-3 text-xs font-medium text-muted-foreground uppercase">
-            Documentación legal
-          </p>
-          <div className="flex flex-col gap-2">
-            {adjuntos.length === 0 && (
-              <p className="text-sm text-muted-foreground">Sin documentos adjuntos.</p>
-            )}
-            {adjuntos.map((doc) => (
-              <div key={doc} className="flex items-center gap-2 text-sm">
-                <FileText className="size-4 text-muted-foreground" />
-                <span className="flex-1 truncate">{doc}</span>
-                <button
-                  type="button"
-                  title="Quitar adjunto"
-                  onClick={() => setAdjuntos((a) => a.filter((d) => d !== doc))}
-                  className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
-                >
-                  <X className="size-3.5" />
-                </button>
-              </div>
-            ))}
-            <input
-              ref={fileRef}
-              type="file"
-              className="hidden"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) handleAdjunto(file);
-                e.target.value = "";
-              }}
-            />
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="mt-1 w-fit"
-              onClick={() => fileRef.current?.click()}
-            >
-              <Paperclip />
-              Adjuntar documento
-            </Button>
-            <p className="text-[11px] text-muted-foreground">Máx. 10 MB; PDF, DOC, JPG.</p>
-          </div>
         </div>
 
         <DialogFooter>

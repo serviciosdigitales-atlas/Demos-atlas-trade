@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Check, ClipboardCheck, Eye, Lock, LockOpen, Pencil, X } from "lucide-react";
+import { Check, Eye, FolderCheck, Lock, LockOpen, Pencil, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { Input } from "@/components/ui/input";
@@ -352,7 +352,7 @@ export function EntesGrid({
                       />
                       {actions.gestionar && row.estado === "Pendiente de Autorización" && (
                         <RowIconButton
-                          icon={ClipboardCheck}
+                          icon={FolderCheck}
                           label="Gestionar"
                           onClick={() => setModal({ kind: "gestionar", ente: row })}
                         />

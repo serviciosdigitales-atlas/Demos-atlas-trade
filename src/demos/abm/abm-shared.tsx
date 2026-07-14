@@ -120,16 +120,6 @@ export function logAuditoria(operacion: string, detalle: string) {
 
 /* ----------------------- Validaciones compartidas (MAGIA-38/39) ----------------------- */
 
-/** Documentación legal: extensiones y tamaño máximo (mismo criterio que edición MAGIA-41). */
-export const ADJUNTO_EXTENSIONES = ["pdf", "doc", "docx", "jpg", "jpeg"];
-export const ADJUNTO_MAX_BYTES = 10 * 1024 * 1024;
-export const ADJUNTO_ERROR = "Formato o tamaño no permitido (máx. 10 MB; PDF, DOC, JPG)";
-
-export function adjuntoValido(file: File): boolean {
-  const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
-  return ADJUNTO_EXTENSIONES.includes(ext) && file.size <= ADJUNTO_MAX_BYTES;
-}
-
 export const RUC_MAX = 12;
 export const EMAIL_MAX = 1000;
 export const TELEFONO_MAX = 25;

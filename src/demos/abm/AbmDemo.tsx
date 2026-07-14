@@ -1,9 +1,17 @@
 import { useEffect, useMemo, useState } from "react";
-import { Check, ChevronDown, Eye, Lock, Pencil, Plus } from "lucide-react";
+import { Bell, ChevronDown, Eye, FolderCheck, Lock, Pencil, Plus } from "lucide-react";
 import { toast } from "sonner";
 
 import { useDemoFlow } from "@/app/flow";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -153,23 +161,19 @@ export function userActionsForRow(permissions: Set<string>, rowDomain: UsuarioDo
 }
 
 /**
- * Control fino simulado (matriz filas 20/26): además del permiso
- * visualizar:<recurso>, el dominio "padre" (banco sobre usuarios EGP, EGP
- * sobre usuarios Proveedor) solo ve los usuarios cargados por su propio dominio.
+ * Control fino simulado: además del permiso visualizar:<recurso>, el Banco ve
+ * todos los usuarios (de todos los dominios); los roles de EGP y Proveedor
+ * solo ven los usuarios de su propia entidad (mismo dominio y mismo ente).
  */
 export function canViewUsuarioRow(
   permissions: Set<string>,
   viewerDomain: UsuarioDominio,
+  viewerEnte: string | null,
   row: UsuarioRow
 ): boolean {
   if (!permissions.has(`visualizar:usuario-${row.dominio}`)) return false;
-  if (viewerDomain === "banco" && row.dominio === "egp") {
-    return row.cargadoPor.dominio === "banco";
-  }
-  if (viewerDomain === "egp" && row.dominio === "proveedor") {
-    return row.cargadoPor.dominio === "egp";
-  }
-  return true;
+  if (viewerDomain === "banco") return true;
+  return row.dominio === viewerDomain && row.ente === viewerEnte;
 }
 
 type AltaOption = {
@@ -242,12 +246,15 @@ const USUARIOS_FILTERS_DEFAULT: UsuariosFilters = {
 function UsuariosGrid({
   permissions,
   viewerDomain,
+  viewerEnte,
   rows: sessionRows,
   onAprobar,
 }: {
   permissions: Set<string>;
   /** Dominio del rol logueado: define qué usuarios de otros dominios se ven (filas 20/26). */
   viewerDomain: UsuarioDominio;
+  /** Ente del rol logueado (null en banco): acota la grilla a la propia entidad. */
+  viewerEnte: string | null;
   /** Todos los usuarios de la sesión de recorrido (semilla + altas en memoria). */
   rows: UsuarioRow[];
   onAprobar: (row: UsuarioRow) => void;
@@ -255,8 +262,8 @@ function UsuariosGrid({
   const [filters, setFilters] = useState<UsuariosFilters>(USUARIOS_FILTERS_DEFAULT);
 
   const allRows = useMemo(
-    () => sessionRows.filter((u) => canViewUsuarioRow(permissions, viewerDomain, u)),
-    [sessionRows, permissions, viewerDomain]
+    () => sessionRows.filter((u) => canViewUsuarioRow(permissions, viewerDomain, viewerEnte, u)),
+    [sessionRows, permissions, viewerDomain, viewerEnte]
   );
   const rolOptions = useMemo(() => [...new Set(allRows.map((u) => u.rol))], [allRows]);
 
@@ -326,9 +333,10 @@ function UsuariosGrid({
       {/* Nota para quien presenta la demo: estas reglas simulan el control fino del back-end. */}
       <p className="border-b bg-muted/30 px-4 py-2 text-xs text-muted-foreground">
         <span className="font-medium text-foreground">Controles finos simulados (sin backend):</span>{" "}
-        el Banco solo ve y aprueba usuarios EGP cargados por otro usuario del Banco; ídem EGP con
-        usuarios Proveedor. El primer Admin-EGP / Admin-Proveedor de un ente se carga desde el
-        dominio padre solo si no existe otro activo.
+        el Banco ve todos los usuarios; los roles de EGP y Proveedor solo ven los usuarios de su
+        propia entidad (su ente). El primer Admin-EGP / Admin-Proveedor de un ente se carga desde
+        el dominio padre solo si no existe otro activo: la campanita junto a «Alta» avisa qué
+        entes hijos siguen sin Admin.
       </p>
 
       {/* Filtros de cabecera (MAGIA-30), estilo Fenix (Central de Gestión). */}
@@ -447,7 +455,7 @@ function UsuariosGrid({
                             (filas 19/25) se valida en handleAprobarUsuario. */}
                         {actions.approve && row.estado === "Pendiente de Autorización" && (
                           <RowIconButton
-                            icon={Check}
+                            icon={FolderCheck}
                             label="Aprobar"
                             onClick={() => onAprobar(row)}
                           />
@@ -493,6 +501,65 @@ function UsuariosGrid({
   );
 }
 
+/**
+ * Modal de aprobación de alta de usuario (filas 19/25): muestra el detalle del
+ * usuario pendiente y confirma la autorización. El control fino simulado se
+ * valida al confirmar (dentro de onAutorizar), igual que en la grilla de entes.
+ */
+function AprobarUsuarioModal({
+  usuario,
+  onOpenChange,
+  onAutorizar,
+}: {
+  usuario: UsuarioRow | null;
+  onOpenChange: (open: boolean) => void;
+  onAutorizar: (row: UsuarioRow) => void;
+}) {
+  return (
+    <Dialog open={usuario !== null} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Aprobar alta de usuario</DialogTitle>
+          <DialogDescription>
+            Autorizá el alta del usuario en estado Pendiente de Autorización.
+          </DialogDescription>
+        </DialogHeader>
+
+        {usuario && (
+          <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 rounded-lg border p-4 text-sm">
+            <dt className="text-muted-foreground">Nombre</dt>
+            <dd>
+              {usuario.nombre} {usuario.apellido}
+            </dd>
+            <dt className="text-muted-foreground">CI</dt>
+            <dd>{usuario.ci}</dd>
+            <dt className="text-muted-foreground">Ente</dt>
+            <dd>{usuario.ente}</dd>
+            <dt className="text-muted-foreground">Rol</dt>
+            <dd>{usuario.rol}</dd>
+            <dt className="text-muted-foreground">Cargado por</dt>
+            <dd>{usuario.cargadoPor.usuario}</dd>
+          </dl>
+        )}
+
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancelar
+          </Button>
+          <Button
+            onClick={() => {
+              if (usuario) onAutorizar(usuario);
+              onOpenChange(false);
+            }}
+          >
+            Autorizar
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export function AbmDemo({ initialAltaUsuario = false }: { initialAltaUsuario?: boolean }) {
   const flow = useDemoFlow();
   // Si hay sesión mock iniciada en el login, el ABM arranca con ese rol.
@@ -514,6 +581,8 @@ export function AbmDemo({ initialAltaUsuario = false }: { initialAltaUsuario?: b
   // dentro del recorrido el rol ya viene del paso de login.
   const [rolePickerOpen, setRolePickerOpen] = useState(() => flow === null);
   const [altaUsuarioOpen, setAltaUsuarioOpen] = useState(false);
+  // Ente hijo elegido desde la campanita: abre el alta apuntada a cargar su Admin.
+  const [altaAdminEnte, setAltaAdminEnte] = useState<string | null>(null);
 
   // Estado de la "sesión de recorrido" (MAGIA-224): usuarios y entes viven en un
   // store en memoria, así las altas sobreviven a la navegación entre pantallas
@@ -522,6 +591,8 @@ export function AbmDemo({ initialAltaUsuario = false }: { initialAltaUsuario?: b
   const [egpRowsState, setEgpRowsState] = useAbmSession("egpRows");
   const [provRowsState, setProvRowsState] = useAbmSession("provRows");
   const [altaEnte, setAltaEnte] = useState<EnteTipo | null>(null);
+  // Usuario pendiente elegido para aprobar: abre el modal de aprobación.
+  const [aprobarUsuario, setAprobarUsuario] = useState<UsuarioRow | null>(null);
 
   const sessionActive = getMockSession() !== null;
   const domain = mockResponses[role]?.user.domain ?? "banco";
@@ -597,11 +668,12 @@ export function AbmDemo({ initialAltaUsuario = false }: { initialAltaUsuario?: b
         ente: u.ente,
         rol: u.rol.toLowerCase(),
         // Base de los controles finos (filas 19/20/25/26): quién cargó el alta.
-        cargadoPor: { usuario: role, dominio: domain as UsuarioDominio },
+        cargadoPor: { usuario: role, dominio: domain as UsuarioDominio, ente },
       },
       ...prev,
     ]);
     setAltaUsuarioOpen(false);
+    setAltaAdminEnte(null);
     toast.success("Registro exitoso", {
       description: `${u.nombre} ${u.apellido} fue registrado exitosamente.`,
     });
@@ -718,6 +790,27 @@ export function AbmDemo({ initialAltaUsuario = false }: { initialAltaUsuario?: b
         .map((e) => ({ nombre: e.razonSocial, bloqueado: e.estado === "Bloqueado" }));
     return { EGP: toOpcion(visibleEgpRows), Proveedor: toOpcion(visibleProvRows) };
   }, [visibleEgpRows, visibleProvRows]);
+
+  // Flujo excepcional (filas 18/24): cuando el dominio padre carga un ente
+  // nuevo, ese ente queda sin Admin activo. La campanita se la mostramos al rol
+  // que puede cargar ese Admin (admin-banco→Admin-EGP, admin-egp→Admin-Proveedor)
+  // con los entes hijos que siguen pendientes.
+  const childAdminDomain: "EGP" | "Proveedor" | null =
+    domain === "banco" ? "EGP" : domain === "egp" ? "Proveedor" : null;
+  const pendingAdminEntes = useMemo(() => {
+    if (!childAdminDomain) return [];
+    if (!permissions.has(`cargar:usuario-${childAdminDomain.toLowerCase()}`)) return [];
+    const rolAdmin = childAdminDomain === "EGP" ? "admin-egp" : "admin-proveedor";
+    return entesByDomain[childAdminDomain]
+      .filter(
+        (e) =>
+          !e.bloqueado &&
+          !usuariosRows.some(
+            (u) => u.rol === rolAdmin && u.ente === e.nombre && u.acceso === "Activo"
+          )
+      )
+      .map((e) => e.nombre);
+  }, [childAdminDomain, permissions, entesByDomain, usuariosRows]);
 
   useEffect(() => {
     if (!visibleTabs.some((tab) => tab.id === activeTab)) {
@@ -844,35 +937,76 @@ export function AbmDemo({ initialAltaUsuario = false }: { initialAltaUsuario?: b
                 ))}
               </div>
 
-              {altaOptions.length > 0 && (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button>
-                      <Plus />
-                      Alta
-                      <ChevronDown className="opacity-70" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="min-w-44">
-                    {altaOptions.map((opt, index) => (
-                      <div key={opt.id}>
-                        {index > 0 && <DropdownMenuSeparator />}
-                        <DropdownMenuItem onSelect={() => handleAltaOption(opt)}>
-                          {opt.label}
+              <div className="flex items-center gap-2">
+                {/* Campanita (filas 18/24): entes hijos sin Admin activo. Cada ítem
+                    abre el alta apuntada a cargar SOLO ese primer Admin. */}
+                {activeTab === "usuarios" && pendingAdminEntes.length > 0 && (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="relative"
+                        aria-label={`${pendingAdminEntes.length} ente(s) sin Admin activo`}
+                      >
+                        <Bell />
+                        <span className="absolute -top-1.5 -right-1.5 flex size-5 items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-destructive-foreground">
+                          {pendingAdminEntes.length}
+                        </span>
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="min-w-64">
+                      <p className="px-2 py-1.5 text-xs text-muted-foreground">
+                        {childAdminDomain} sin Admin activo: cargá su primer Admin-
+                        {childAdminDomain}.
+                      </p>
+                      <DropdownMenuSeparator />
+                      {pendingAdminEntes.map((nombre) => (
+                        <DropdownMenuItem
+                          key={nombre}
+                          onSelect={() => {
+                            setAltaAdminEnte(nombre);
+                            setAltaUsuarioOpen(true);
+                          }}
+                        >
+                          Cargar Admin-{childAdminDomain} · {nombre}
                         </DropdownMenuItem>
-                      </div>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              )}
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
+
+                {altaOptions.length > 0 && (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button>
+                        <Plus />
+                        Alta
+                        <ChevronDown className="opacity-70" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="min-w-44">
+                      {altaOptions.map((opt, index) => (
+                        <div key={opt.id}>
+                          {index > 0 && <DropdownMenuSeparator />}
+                          <DropdownMenuItem onSelect={() => handleAltaOption(opt)}>
+                            {opt.label}
+                          </DropdownMenuItem>
+                        </div>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
+              </div>
             </div>
 
             {activeTab === "usuarios" && (
               <UsuariosGrid
                 permissions={permissions}
                 viewerDomain={domain as UsuarioDominio}
+                viewerEnte={ente}
                 rows={usuariosRows}
-                onAprobar={handleAprobarUsuario}
+                onAprobar={setAprobarUsuario}
               />
             )}
             {(activeTab === "egp" || activeTab === "proveedor") && (
@@ -947,20 +1081,38 @@ export function AbmDemo({ initialAltaUsuario = false }: { initialAltaUsuario?: b
         />
       )}
 
-      {/* Alta de usuario (MAGIA-47): modal sobre esta misma pantalla. */}
+      {/* Alta de usuario (MAGIA-47): modal sobre esta misma pantalla. Desde la
+          campanita queda apuntada SOLO a cargar el primer Admin del ente hijo. */}
       {altaUsuarioOpen && (
         <AltaUsuarioDialog
           sessionDomain={DOMINIO_DIALOG[domain] ?? "Banco"}
           sessionEnte={ente}
-          allowedDomains={altaDomains}
+          allowedDomains={altaAdminEnte && childAdminDomain ? [childAdminDomain] : altaDomains}
           entesByDomain={entesByDomain}
           existingMails={sessionMails}
           existingCIs={sessionCIs}
           hasActiveAdmin={hasActiveAdmin}
-          onClose={() => setAltaUsuarioOpen(false)}
+          initialSelection={
+            altaAdminEnte && childAdminDomain
+              ? { dominio: childAdminDomain, ente: altaAdminEnte }
+              : null
+          }
+          onClose={() => {
+            setAltaUsuarioOpen(false);
+            setAltaAdminEnte(null);
+          }}
           onSave={handleAltaUsuarioSave}
         />
       )}
+
+      {/* Aprobación de alta de usuario (filas 19/25): modal sobre esta pantalla. */}
+      <AprobarUsuarioModal
+        usuario={aprobarUsuario}
+        onOpenChange={(open) => {
+          if (!open) setAprobarUsuario(null);
+        }}
+        onAutorizar={handleAprobarUsuario}
+      />
     </PlatformShellDemo>
   );
 }

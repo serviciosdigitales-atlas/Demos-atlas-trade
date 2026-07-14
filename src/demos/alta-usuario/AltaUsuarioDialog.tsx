@@ -110,6 +110,7 @@ export function AltaUsuarioDialog({
   existingMails,
   existingCIs,
   hasActiveAdmin,
+  initialSelection = null,
   onClose,
   onSave,
 }: {
@@ -127,6 +128,11 @@ export function AltaUsuarioDialog({
   existingCIs: Set<string>;
   /** Control fino simulado (filas 18/24): ¿el ente ya tiene un Admin activo? */
   hasActiveAdmin: (dominio: "EGP" | "Proveedor", ente: string) => boolean;
+  /**
+   * Abre el modal ya apuntado a un dominio/ente (campanita del ABM: carga del
+   * primer Admin de un ente hijo recién creado). El rol queda forzado al Admin.
+   */
+  initialSelection?: { dominio: Dominio; ente: string } | null;
   onClose: () => void;
   onSave: (u: Usuario) => void;
 }) {
@@ -136,6 +142,14 @@ export function AltaUsuarioDialog({
   // ente queda fijado al de la sesión solo en carga mismo-dominio. En carga
   // inter-dominio el rol arranca forzado al Admin del ente hijo (excepción).
   const [form, setForm] = useState<FormValues>(() => {
+    if (initialSelection) {
+      return {
+        ...EMPTY_FORM,
+        dominio: initialSelection.dominio,
+        ente: initialSelection.ente,
+        rol: forcedAdminRole(sessionDomain, initialSelection.dominio) ?? "",
+      };
+    }
     const unico = dominiosPermitidos.length === 1 ? dominiosPermitidos[0] : undefined;
     if (!unico) return EMPTY_FORM;
     return {

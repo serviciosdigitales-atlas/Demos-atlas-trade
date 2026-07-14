@@ -1,6 +1,5 @@
-import { useRef, useState, type ReactNode } from "react";
-import { FileText, Paperclip, TriangleAlert, X } from "lucide-react";
-import { toast } from "sonner";
+import { useState, type ReactNode } from "react";
+import { TriangleAlert } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -15,8 +14,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import {
-  ADJUNTO_ERROR,
-  adjuntoValido,
   type DatosBancarios,
   type EnteRow,
   type EnteTipo,
@@ -116,8 +113,6 @@ export function Field({
   );
 }
 
-const ADJUNTOS_INICIALES = ["estatuto-social.pdf", "cedula-representante.jpg"];
-
 /**
  * Modal de Ver detalle / Edición de EGP y Proveedor.
  * - mode "ver": todos los campos bloqueados, sin Guardar.
@@ -158,8 +153,6 @@ export function EnteFormModal({
     datosBancarios: ente.datosBancarios ?? DATOS_BANCARIOS_VACIOS,
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [adjuntos, setAdjuntos] = useState<string[]>(ADJUNTOS_INICIALES);
-  const fileRef = useRef<HTMLInputElement>(null);
 
   function set(key: keyof Omit<EnteFormValues, "datosBancarios">, value: string) {
     setValues((v) => ({ ...v, [key]: value }));
@@ -175,7 +168,6 @@ export function EnteFormModal({
       values.razonSocial !== ente.razonSocial ||
       values.email !== ente.email ||
       values.telefono !== ente.telefono ||
-      adjuntos.length !== ADJUNTOS_INICIALES.length ||
       (conDatosBancarios &&
         JSON.stringify(values.datosBancarios) !==
           JSON.stringify(ente.datosBancarios ?? DATOS_BANCARIOS_VACIOS))
@@ -228,14 +220,6 @@ export function EnteFormModal({
     if (!patch) return;
     onAutorizarRechazado?.(patch, !hayCambios());
     onOpenChange(false);
-  }
-
-  function handleAdjunto(file: File) {
-    if (!adjuntoValido(file)) {
-      toast.error(ADJUNTO_ERROR);
-      return;
-    }
-    setAdjuntos((a) => [...a, file.name]);
   }
 
   const inputError = "border-red-500 focus-visible:ring-red-500/30";
@@ -367,58 +351,6 @@ export function EnteFormModal({
             </div>
           </div>
         )}
-
-        <div className="rounded-lg border p-4">
-          <p className="mb-3 text-xs font-medium text-muted-foreground uppercase">
-            Documentación legal
-          </p>
-          <div className="flex flex-col gap-2">
-            {adjuntos.length === 0 && (
-              <p className="text-sm text-muted-foreground">Sin documentos adjuntos.</p>
-            )}
-            {adjuntos.map((doc) => (
-              <div key={doc} className="flex items-center gap-2 text-sm">
-                <FileText className="size-4 text-muted-foreground" />
-                <span className="flex-1 truncate">{doc}</span>
-                {!readOnly && (
-                  <button
-                    type="button"
-                    title="Quitar adjunto"
-                    onClick={() => setAdjuntos((a) => a.filter((d) => d !== doc))}
-                    className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
-                  >
-                    <X className="size-3.5" />
-                  </button>
-                )}
-              </div>
-            ))}
-            {!readOnly && (
-              <>
-                <input
-                  ref={fileRef}
-                  type="file"
-                  className="hidden"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) handleAdjunto(file);
-                    e.target.value = "";
-                  }}
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="mt-1 w-fit"
-                  onClick={() => fileRef.current?.click()}
-                >
-                  <Paperclip />
-                  Adjuntar documento
-                </Button>
-                <p className="text-[11px] text-muted-foreground">Máx. 10 MB; PDF, DOC, JPG.</p>
-              </>
-            )}
-          </div>
-        </div>
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>

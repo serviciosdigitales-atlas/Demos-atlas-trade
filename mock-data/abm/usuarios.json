@@ -10,7 +10,7 @@
     "dominio": "egp",
     "ente": "Biggie",
     "rol": "admin-egp",
-    "cargadoPor": { "usuario": "operador-banco", "dominio": "banco" }
+    "cargadoPor": { "usuario": "admin-banco", "dominio": "banco", "ente": null }
   },
   {
     "nombre": "María",
@@ -23,7 +23,7 @@
     "dominio": "proveedor",
     "ente": "Massei",
     "rol": "operador-proveedor",
-    "cargadoPor": { "usuario": "admin-proveedor", "dominio": "proveedor" }
+    "cargadoPor": { "usuario": "admin-proveedor", "dominio": "proveedor", "ente": "Massei" }
   },
   {
     "nombre": "Carlos",
@@ -36,7 +36,7 @@
     "dominio": "banco",
     "ente": "Banco Atlas",
     "rol": "operador-banco",
-    "cargadoPor": { "usuario": "admin-banco", "dominio": "banco" }
+    "cargadoPor": { "usuario": "admin-banco", "dominio": "banco", "ente": null }
   },
   {
     "nombre": "Ana",
@@ -49,7 +49,7 @@
     "dominio": "egp",
     "ente": "Ferrex",
     "rol": "operador-egp",
-    "cargadoPor": { "usuario": "admin-egp", "dominio": "egp" }
+    "cargadoPor": { "usuario": "admin-egp", "dominio": "egp", "ente": "Ferrex" }
   },
   {
     "nombre": "Pedro",
@@ -62,7 +62,7 @@
     "dominio": "banco",
     "ente": "Banco Atlas",
     "rol": "admin-banco",
-    "cargadoPor": { "usuario": "supervisor-banco", "dominio": "banco" }
+    "cargadoPor": { "usuario": "supervisor-banco", "dominio": "banco", "ente": null }
   },
   {
     "nombre": "Lucía",
@@ -75,7 +75,7 @@
     "dominio": "proveedor",
     "ente": "Nestlé",
     "rol": "admin-proveedor",
-    "cargadoPor": { "usuario": "supervisor-egp", "dominio": "egp" }
+    "cargadoPor": { "usuario": "admin-egp", "dominio": "egp", "ente": "Biggie" }
   },
   {
     "nombre": "Jorge",
@@ -88,6 +88,6 @@
     "dominio": "proveedor",
     "ente": "Lincoln",
     "rol": "operador-proveedor",
-    "cargadoPor": { "usuario": "admin-proveedor", "dominio": "proveedor" }
+    "cargadoPor": { "usuario": "admin-proveedor", "dominio": "proveedor", "ente": "Lincoln" }
   }
 ]
