@@ -821,6 +821,8 @@ export function AbmDemo({ initialAltaUsuario = false }: { initialAltaUsuario?: b
   const altaOptions = useMemo(() => {
     return getAltaOptions(activeTab).filter((opt) => hasPermission(permissions, opt.permission));
   }, [activeTab, permissions]);
+  // Única opción de alta para la pestaña activa (ver getAltaOptions): botón directo, sin menú.
+  const altaOption = altaOptions[0];
 
   function handleAltaOption(option: AltaOption) {
     if (option.id === "usuario") {
@@ -976,9 +978,8 @@ export function AbmDemo({ initialAltaUsuario = false }: { initialAltaUsuario?: b
                   </DropdownMenu>
                 )}
 
-                {/* La pestaña activa ya define qué se da de alta: botón directo, sin menú. */}
-                {altaOptions.length > 0 && (
-                  <Button onClick={() => handleAltaOption(altaOptions[0])}>
+                {altaOption && (
+                  <Button onClick={() => handleAltaOption(altaOption)}>
                     <Plus />
                     Alta
                   </Button>
