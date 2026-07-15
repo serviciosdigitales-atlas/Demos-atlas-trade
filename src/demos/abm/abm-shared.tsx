@@ -44,6 +44,7 @@ export type EnteRow = {
   // Solo EGP
   monedas?: string[];
   lineaCredito?: { currencyCode: "PYG" | "USD"; amount: number } | null;
+  /** Derivado (no se persiste): AbmDemo lo calcula contando los Proveedores con este EGP como padre. */
   proveedoresAsociados?: number;
   // Solo Proveedor
   egpPadre?: string;

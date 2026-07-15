@@ -646,16 +646,31 @@ export function AbmDemo({ initialAltaUsuario = false }: { initialAltaUsuario?: b
     return rows.filter((e) => e.estado !== "Rechazado").map((e) => e.razonSocial);
   }, [domain, egpRowsState, provRowsState]);
 
+  // proveedoresAsociados es un dato DERIVADO: se calcula acá contando las filas
+  // de Proveedor que referencian a cada EGP, así el alta y el borrado de un
+  // Proveedor lo mantienen al día sin contadores manuales. Cuenta cualquier
+  // estado: mientras exista una fila que apunte al EGP, este no puede borrarse
+  // (la regla protege integridad referencial y el modal de borrado dice cómo
+  // liberarlo: eliminar al Proveedor y reintentar).
+  const egpRowsWithCount = useMemo(
+    () =>
+      egpRowsState.map((e) => ({
+        ...e,
+        proveedoresAsociados: provRowsState.filter((p) => p.egpPadre === e.razonSocial).length,
+      })),
+    [egpRowsState, provRowsState]
+  );
+
   // Control fino simulado (relación EGP↔Proveedor, 1:N): no todos los entes ven
   // a todos. El filtro corre sobre el store de la sesión, así aplica igual a la
   // semilla de los JSON y a las altas en memoria. Banco ve todo; un rol EGP solo
   // ve su propio EGP y los Proveedores cuyo EGP padre es su ente; un rol
   // Proveedor solo se ve a sí mismo.
   const visibleEgpRows = useMemo(() => {
-    if (domain === "egp") return egpRowsState.filter((e) => e.razonSocial === ente);
+    if (domain === "egp") return egpRowsWithCount.filter((e) => e.razonSocial === ente);
     if (domain === "proveedor") return [];
-    return egpRowsState;
-  }, [domain, ente, egpRowsState]);
+    return egpRowsWithCount;
+  }, [domain, ente, egpRowsWithCount]);
   const visibleProvRows = useMemo(() => {
     if (domain === "egp") return provRowsState.filter((p) => p.egpPadre === ente);
     if (domain === "proveedor") return provRowsState.filter((p) => p.razonSocial === ente);
@@ -803,21 +818,15 @@ export function AbmDemo({ initialAltaUsuario = false }: { initialAltaUsuario?: b
 
   /**
    * Alta de EGP (MAGIA-38) / Proveedor (MAGIA-39) guardada: entra a la grilla como
-   * Pendiente de Autorización. En Proveedor además se actualiza el EGP padre
-   * (relación padre-hijo). APIs de datos financieros y notificación: fuera de alcance.
+   * Pendiente de Autorización. La relación con el EGP padre queda en `egpPadre`;
+   * proveedoresAsociados se deriva de eso (ver egpRowsWithCount), no se suma acá.
+   * APIs de datos financieros y notificación: fuera de alcance.
    */
   function handleAltaEnteSave(tipo: EnteTipo, row: EnteRow) {
     if (tipo === "egp") {
       setEgpRowsState((prev) => [row, ...prev]);
     } else {
       setProvRowsState((prev) => [row, ...prev]);
-      setEgpRowsState((prev) =>
-        prev.map((e) =>
-          e.razonSocial === row.egpPadre
-            ? { ...e, proveedoresAsociados: (e.proveedoresAsociados ?? 0) + 1 }
-            : e
-        )
-      );
     }
     logAuditoria("alta", `${tipo === "egp" ? "EGP" : "Proveedor"} ${row.razonSocial} (${row.ruc})`);
     setAltaEnte(null);

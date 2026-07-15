@@ -221,11 +221,12 @@ export function AltaEnteDialog({
       // apruebe el supervisor-egp (aprobar-alta:ente-proveedor).
       estado: esEgp ? "Activo" : "Pendiente de Autorización",
       facturas: "ninguna",
+      // proveedoresAsociados no se setea: es derivado (lo calcula AbmDemo
+      // contando los Proveedores cuyo egpPadre es este EGP).
       ...(esEgp
         ? {
             monedas: core?.monedas ?? [],
             lineaCredito: core?.lineaCredito ?? null,
-            proveedoresAsociados: 0,
           }
         : { egpPadre }),
     });

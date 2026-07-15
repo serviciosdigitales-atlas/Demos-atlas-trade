@@ -9,8 +9,7 @@
     "lineaCredito": { "currencyCode": "PYG", "amount": 1500000000 },
     "clienteAtlas": true,
     "estado": "Activo",
-    "facturas": "en-curso",
-    "proveedoresAsociados": 2
+    "facturas": "en-curso"
   },
   {
     "id": "egp-02",
@@ -22,7 +21,6 @@
     "lineaCredito": { "currencyCode": "PYG", "amount": 850000000 },
     "clienteAtlas": true,
     "estado": "Activo",
-    "facturas": "pendientes",
-    "proveedoresAsociados": 1
+    "facturas": "pendientes"
   }
 ]
