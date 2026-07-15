@@ -45,9 +45,20 @@ const session: AbmSessionState = {
   provRows: proveedorRows.map((r) => ({ ...r })),
 };
 
-/** Mails/CIs "ya registrados" para las validaciones de duplicados del alta (MAGIA-47). */
-export const sessionMails = new Set([ALTA_USUARIO_SEEDS.existingMail]);
-export const sessionCIs = new Set([ALTA_USUARIO_SEEDS.existingCI]);
+/**
+ * Mails/CIs "ya registrados" para las validaciones de duplicados del alta
+ * (MAGIA-47): los de la semilla de la grilla de Usuarios + los datos de prueba
+ * dedicados. Un usuario multi-ente (María) aparece una vez por ente en la
+ * grilla pero registra su CI/mail una sola vez acá.
+ */
+export const sessionMails = new Set([
+  ALTA_USUARIO_SEEDS.existingMail,
+  ...session.usuarios.map((u) => u.mail.toLowerCase()),
+]);
+export const sessionCIs = new Set([
+  ALTA_USUARIO_SEEDS.existingCI,
+  ...session.usuarios.map((u) => u.ci),
+]);
 
 /**
  * useState respaldado por el store en memoria: el componente se monta con lo
